@@ -23,15 +23,27 @@ export const api = {
   me: () => request<any>("/auth/me"),
   logout: () => request<{ success: boolean }>("/auth/logout", { method: "POST" }),
 
+  getMyProfile: () => request<any>("/users/me"),
+  updateMyProfile: (data: { fullName?: string; title?: string; username?: string }) =>
+    request<any>("/users/me", { method: "PATCH", body: JSON.stringify(data) }),
+
   getProjects: () => request<any[]>("/projects"),
+  getProject: (id: string) => request<any>(`/projects/${id}`),
   createProject: (data: { name: string; priority?: string; dueDate?: string }) =>
     request<any>("/projects", { method: "POST", body: JSON.stringify(data) }),
+  updateProject: (id: string, data: Record<string, unknown>) =>
+    request<any>(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   getTasks: (projectId?: string) => request<any[]>(`/tasks${projectId ? `?project=${projectId}` : ""}`),
+  getTask: (id: string) => request<any>(`/tasks/${id}`),
   createTask: (data: { title: string; status?: string; project?: string }) =>
     request<any>("/tasks", { method: "POST", body: JSON.stringify(data) }),
   updateTask: (id: string, data: Record<string, unknown>) =>
     request<any>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  addSubtask: (id: string, data: { title: string; priority?: string; dueDate?: string }) =>
+    request<any>(`/tasks/${id}/subtasks`, { method: "POST", body: JSON.stringify(data) }),
+  addComment: (id: string, text: string) =>
+    request<any>(`/tasks/${id}/comments`, { method: "POST", body: JSON.stringify({ text }) }),
 };
 
 export { API_URL };
