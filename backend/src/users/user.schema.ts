@@ -27,6 +27,12 @@ export class User {
 
   @Prop()
   googleId?: string;
+
+  // False for a fresh Google account until the user fills in name/title/username
+  // themselves (see auth flow) — guests are considered complete immediately
+  // since we generate a usable placeholder name for them.
+  @Prop({ default: true })
+  profileComplete: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

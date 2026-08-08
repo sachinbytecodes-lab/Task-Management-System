@@ -18,12 +18,14 @@ export class AuthService {
     return { token: this.sign(user), user };
   }
 
-  async googleLogin(profile: { googleId: string; email: string; fullName: string; avatarUrl?: string }) {
+  async googleLogin(profile: { googleId: string; email: string; avatarUrl?: string }) {
     let user = await this.usersService.findByGoogleId(profile.googleId);
     if (!user) {
       user = await this.usersService.findByEmail(profile.email);
     }
     if (!user) {
+      // Email is detected from the Google account; fullName/title/username are
+      // deliberately left for the user to fill in on the /onboarding screen.
       user = await this.usersService.createGoogleUser(profile);
     }
     return { token: this.sign(user), user };

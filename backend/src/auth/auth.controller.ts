@@ -41,10 +41,11 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   async googleCallback(@Req() req: Request, @Res() res: Response) {
-    const { token } = await this.authService.googleLogin(req.user as any);
+    const { token, user } = await this.authService.googleLogin(req.user as any);
     this.setCookie(res, token);
     const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
-    res.redirect(`${frontendUrl}/tasks`);
+    const destination = user.profileComplete ? '/tasks' : '/onboarding';
+    res.redirect(`${frontendUrl}${destination}`);
   }
 
   @UseGuards(JwtAuthGuard)
