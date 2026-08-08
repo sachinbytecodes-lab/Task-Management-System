@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
 import TopBar from "@/components/top-bar";
@@ -8,21 +8,57 @@ import FilterMenu from "@/components/filter-menu";
 import PriorityBadge from "@/components/priority-badge";
 import Avatar from "@/components/avatar";
 import AddTaskModal from "@/components/add-task-modal";
-import { projects as initialProjects } from "@/lib/mock-data";
+import { projects as mockProjects } from "@/lib/mock-data";
 import { Priority, ProjectItem } from "@/lib/types";
+import { api } from "@/lib/api";
+import { useAuth } from "@/context/auth-context";
+
+function normalize(p: any): ProjectItem {
+  return {
+    id: p._id ?? p.id,
+    name: p.name,
+    priority: p.priority,
+    lead: p.lead
+      ? { id: p.lead._id, name: p.lead.fullName, initials: (p.lead.fullName ?? "?")[0], avatarGradient: "from-fuchsia-500 via-purple-500 to-indigo-600" }
+      : null,
+    dueDate: p.dueDate ?? "—",
+  };
+}
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<ProjectItem[]>(initialProjects);
+  const { apiConnected } = useAuth();
+  const [projects, setProjects] = useState<ProjectItem[]>(mockProjects);
+  const [usingApi, setUsingApi] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<Priority | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  useEffect(() => {
+    if (!apiConnected) return;
+    api
+      .getProjects()
+      .then((data) => {
+        setProjects(data.map(normalize));
+        setUsingApi(true);
+      })
+      .catch(() => setUsingApi(false));
+  }, [apiConnected]);
+
   const filtered = projects
     .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
     .filter((p) => !priorityFilter || p.priority === priorityFilter);
 
-  const addProject = (title: string) => {
+  const addProject = async (title: string) => {
+    if (usingApi) {
+      try {
+        const created = await api.createProject({ name: title });
+        setProjects((p) => [...p, normalize(created)]);
+        return;
+      } catch {
+        // fall through to local add
+      }
+    }
     setProjects((p) => [
       ...p,
       { id: `p-${Date.now()}`, name: title, priority: "No Priority", lead: null, dueDate: "—" },
@@ -55,6 +91,11 @@ export default function ProjectsPage() {
             <span className="w-32">Due Date</span>
             <span className="w-16 text-right">Actions</span>
           </div>
+          {filtered.length === 0 && (
+            <div className="px-4 py-6 text-sm text-center" style={{ color: "var(--text-muted)" }}>
+              No projects yet — click &quot;Add Project&quot; to create one.
+            </div>
+          )}
           {filtered.map((p) => (
             <Link
               key={p.id}
