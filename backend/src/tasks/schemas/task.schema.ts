@@ -36,6 +36,12 @@ export const SubtaskSchema = SchemaFactory.createForClass(Subtask);
 export class Task {
   _id: Types.ObjectId;
 
+  // Owner = the guest/Google account this task belongs to. Every list query is
+  // scoped to req.user's own owner id, so different guest sessions never see
+  // each other's data.
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
+  owner: Types.ObjectId;
+
   @Prop({ required: true })
   title: string;
 
@@ -51,11 +57,20 @@ export class Task {
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
   member: Types.ObjectId | null;
 
+  // Who "reported"/created the task — defaults to owner at creation time,
+  // but kept as its own field since a task can conceptually be reported by
+  // someone other than its current owner in a multi-user workspace.
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  reporter: Types.ObjectId | null;
+
   @Prop()
   dueDate?: string;
 
   @Prop({ type: [String], default: [] })
   labels: string[];
+
+  @Prop({ type: [String], default: [] })
+  teams: string[];
 
   @Prop({ type: Types.ObjectId, ref: 'Project', default: null, index: true })
   project: Types.ObjectId | null;

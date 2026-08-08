@@ -23,12 +23,20 @@ export class CreateTaskDto {
   member?: string;
 
   @IsOptional()
+  @IsMongoId()
+  reporter?: string;
+
+  @IsOptional()
   @IsString()
   dueDate?: string;
 
   @IsOptional()
   @IsArray()
   labels?: string[];
+
+  @IsOptional()
+  @IsArray()
+  teams?: string[];
 
   @IsOptional()
   @IsMongoId()
@@ -58,12 +66,20 @@ export class UpdateTaskDto {
   member?: string;
 
   @IsOptional()
+  @IsMongoId()
+  reporter?: string;
+
+  @IsOptional()
   @IsString()
   dueDate?: string;
 
   @IsOptional()
   @IsArray()
   labels?: string[];
+
+  @IsOptional()
+  @IsArray()
+  teams?: string[];
 
   @IsOptional()
   @IsMongoId()
