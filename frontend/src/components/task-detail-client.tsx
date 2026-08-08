@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   Lock, Eye, Share2, MoreHorizontal, PanelRight, ChevronDown, Plus, Settings,
   Paperclip, Send, Smile, MoreVertical, Calendar, Check,
@@ -11,16 +12,133 @@ import Avatar from "./avatar";
 import PriorityBadge from "@/components/priority-badge";
 import Dropdown from "@/components/dropdown";
 import MiniCalendar from "@/components/mini-calendar";
-import { taskDetail, subtasks, comments, currentUser } from "@/lib/mock-data";
+import { taskDetail as mockTaskDetail, subtasks as mockSubtasks, comments as mockComments, currentUser } from "@/lib/mock-data";
 import { Priority } from "@/lib/types";
+import { api } from "@/lib/api";
+import { useAuth } from "@/context/auth-context";
 
 const PRIORITIES: Priority[] = ["No Priority", "Urgent", "High", "Medium", "Low"];
 
+function toMember(m: any) {
+  if (!m) return null;
+  return {
+    id: m._id ?? m.id ?? "unknown",
+    name: m.fullName ?? m.name ?? "Unknown",
+    initials: (m.fullName ?? m.name ?? "?")[0],
+    avatarGradient: "from-fuchsia-500 via-purple-500 to-indigo-600",
+  };
+}
+
 export default function TaskDetailClient() {
-  const [priority, setPriority] = useState<Priority>(taskDetail.priority);
+  const params = useParams<{ id: string }>();
+  const { apiConnected } = useAuth();
+
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [task, setTask] = useState<any>(null);
+  const [priority, setPriority] = useState<Priority>("No Priority");
   const [priorityOpen, setPriorityOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
   const [reply, setReply] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setNotFound(false);
+
+      if (apiConnected) {
+        try {
+          const t = await api.getTask(params.id);
+          if (!cancelled) {
+            setTask(t);
+            setPriority(t.priority);
+            setLoading(false);
+          }
+          return;
+        } catch {
+          // Real API is up but this id doesn't exist there (e.g. it's a mock id) — fall through
+        }
+      }
+
+      // Fallback: mock data, only for the one seeded mock id
+      if (!cancelled) {
+        if (params.id === mockTaskDetail.id || !apiConnected) {
+          setTask(null); // signals "use mock" in render
+          setPriority(mockTaskDetail.priority);
+          setLoading(false);
+        } else {
+          setNotFound(true);
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id, apiConnected]);
+
+  const isMock = !task;
+  const title = isMock ? mockTaskDetail.title : task.title;
+  const description = isMock ? mockTaskDetail.description : task.description || "No description yet.";
+  const labels: string[] = isMock ? mockTaskDetail.labels : task.labels ?? [];
+  const status = isMock ? mockTaskDetail.status : task.status;
+  const dueDate = isMock ? mockTaskDetail.dueDate : task.dueDate ?? "No due date";
+  const subtaskList = isMock ? mockSubtasks : (task.subtasks ?? []).map((s: any) => ({
+    id: s._id, title: s.title, priority: s.priority, member: toMember(s.member), dueDate: s.dueDate ?? "—",
+  }));
+  const commentList = isMock ? mockComments : (task.comments ?? []).map((c: any) => ({
+    id: c._id,
+    author: toMember(c.author) ?? currentUser,
+    text: c.text,
+    postedAt: c.createdAt ? new Date(c.createdAt).toLocaleString() : "just now",
+  }));
+
+  const changePriority = async (p: Priority) => {
+    setPriority(p);
+    setPriorityOpen(false);
+    if (!isMock && apiConnected) {
+      try {
+        await api.updateTask(task._id, { priority: p });
+        setTask((t: any) => ({ ...t, priority: p }));
+      } catch {
+        // optimistic update stands even if the request failed
+      }
+    }
+  };
+
+  const submitComment = async () => {
+    if (!reply.trim()) return;
+    if (isMock || !apiConnected) {
+      setReply("");
+      return;
+    }
+    setSubmittingComment(true);
+    try {
+      const updated = await api.addComment(task._id, reply.trim());
+      setTask(updated);
+      setReply("");
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-8 text-sm" style={{ color: "var(--text-muted)" }}>Loading task…</div>;
+  }
+
+  if (notFound) {
+    return (
+      <div className="p-8">
+        <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>This task couldn&apos;t be found.</p>
+        <Link href="/tasks" className="text-sm underline" style={{ color: "var(--text)" }}>Back to Tasks</Link>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -34,12 +152,17 @@ export default function TaskDetailClient() {
         onAdd={() => {}}
         addLabel="Add Task"
       />
-      <div className="hidden" />
+
+      {isMock && apiConnected === false && (
+        <div className="mx-6 mt-4 rounded-lg px-3 py-2 text-xs" style={{ background: "#fef3c7", color: "#92400e" }}>
+          Showing demo data — the API isn&apos;t reachable right now, so edits here won&apos;t be saved.
+        </div>
+      )}
 
       <div className="flex">
         <div className="flex-1 min-w-0 px-8 py-6 max-w-3xl">
           <div className="flex items-start justify-between mb-2">
-            <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>{taskDetail.title}</h1>
+            <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>{title}</h1>
             <div className="flex items-center gap-2 shrink-0">
               <IconBtn><Lock size={15} /></IconBtn>
               <IconBtn><Eye size={15} /><span className="text-xs ml-1">1</span></IconBtn>
@@ -48,25 +171,20 @@ export default function TaskDetailClient() {
               <IconBtn><PanelRight size={15} /></IconBtn>
             </div>
           </div>
-          <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>{taskDetail.description}</p>
+          <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>{description}</p>
 
           <Field label="Properties">
-            <span
-              className="inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full border"
-              style={{ borderColor: "var(--border)", color: "var(--text)" }}
-            >
-              A {taskDetail.assignee}
-            </span>
             <span
               className="inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full"
               style={{ background: "#fee2e2", color: "#dc2626" }}
             >
-              <Calendar size={12} /> {taskDetail.dueDate}
+              <Calendar size={12} /> {dueDate}
             </span>
           </Field>
 
           <Field label="Labels">
-            {taskDetail.labels.map((l) => (
+            {labels.length === 0 && <span className="text-sm" style={{ color: "var(--text-muted)" }}>No labels</span>}
+            {labels.map((l: string) => (
               <span
                 key={l}
                 className="text-sm px-2.5 py-1 rounded-full border"
@@ -98,7 +216,10 @@ export default function TaskDetailClient() {
               <span className="w-28">Due Date</span>
               <span className="w-14 text-right">Actions</span>
             </div>
-            {subtasks.map((s) => (
+            {subtaskList.length === 0 && (
+              <div className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>No subtasks yet.</div>
+            )}
+            {subtaskList.map((s: any) => (
               <div key={s.id} className="flex items-center px-4 py-3 text-sm border-t" style={{ borderColor: "var(--border)" }}>
                 <span className="flex-1" style={{ color: "var(--text)" }}>{s.title}</span>
                 <span className="w-24"><PriorityBadge priority={s.priority} /></span>
@@ -107,13 +228,26 @@ export default function TaskDetailClient() {
                 <span className="w-14 flex justify-end"><MoreHorizontal size={15} className="opacity-50" /></span>
               </div>
             ))}
-            <button className="w-full flex items-center gap-2 px-4 py-3 text-sm border-t hover:bg-black/[0.02]" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
+            <button
+              onClick={async () => {
+                if (isMock || !apiConnected) return;
+                const title = window.prompt("Subtask title");
+                if (!title) return;
+                const updated = await api.addSubtask(task._id, { title });
+                setTask(updated);
+              }}
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm border-t hover:bg-black/[0.02]"
+              style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+            >
               <Plus size={14} /> Add Subtasks
             </button>
           </div>
 
-          <h2 className="font-semibold text-sm mb-3" style={{ color: "var(--text)" }}>Subtasks</h2>
-          {comments.map((c) => (
+          <h2 className="font-semibold text-sm mb-3" style={{ color: "var(--text)" }}>Comments</h2>
+          {commentList.length === 0 && (
+            <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>No comments yet — be the first to leave one.</p>
+          )}
+          {commentList.map((c: any) => (
             <div key={c.id} className="rounded-xl border p-4 mb-3" style={{ borderColor: "var(--border)" }}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -130,27 +264,21 @@ export default function TaskDetailClient() {
             </div>
           ))}
 
-          <div className="rounded-xl border p-3 flex items-center gap-2 mb-4" style={{ borderColor: "var(--border)" }}>
+          <div className="rounded-xl border p-3 flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
             <Avatar member={currentUser} size={26} />
             <input
               value={reply}
               onChange={(e) => setReply(e.target.value)}
-              placeholder="Leave a reply…"
-              className="flex-1 bg-transparent outline-none text-sm"
+              onKeyDown={(e) => e.key === "Enter" && submitComment()}
+              placeholder={isMock || !apiConnected ? "Comments are read-only in demo mode…" : "Add a comment…"}
+              disabled={isMock || !apiConnected || submittingComment}
+              className="flex-1 bg-transparent outline-none text-sm disabled:opacity-50"
               style={{ color: "var(--text)" }}
             />
             <Paperclip size={15} className="opacity-50" />
-            <Send size={15} className="opacity-50" />
-          </div>
-
-          <div className="rounded-xl border p-3 flex items-center gap-2" style={{ borderColor: "var(--border)" }}>
-            <input
-              placeholder="Add a comment…"
-              className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: "var(--text)" }}
-            />
-            <Paperclip size={15} className="opacity-50" />
-            <Send size={15} className="opacity-50" />
+            <button onClick={submitComment} disabled={isMock || !apiConnected}>
+              <Send size={15} className="opacity-50" />
+            </button>
           </div>
         </div>
 
@@ -167,7 +295,7 @@ export default function TaskDetailClient() {
 
           <DetailRow label="Status">
             <span className="inline-flex items-center gap-1.5 text-sm font-medium" style={{ color: "#d97706" }}>
-              <span className="w-2 h-2 rounded-full bg-amber-500" /> Backlog
+              <span className="w-2 h-2 rounded-full bg-amber-500" /> {status}
             </span>
           </DetailRow>
 
@@ -185,7 +313,7 @@ export default function TaskDetailClient() {
                 {PRIORITIES.map((p) => (
                   <button
                     key={p}
-                    onClick={() => { setPriority(p); setPriorityOpen(false); }}
+                    onClick={() => changePriority(p)}
                     className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-black/5"
                   >
                     <PriorityBadge priority={p} />
@@ -209,11 +337,7 @@ export default function TaskDetailClient() {
                 className="text-sm px-2 py-1 rounded-full border flex items-center gap-1"
                 style={{ borderColor: "var(--border)", color: "var(--text)" }}
               >
-                <Calendar size={12} /> Jan 10
-              </button>
-              <span style={{ color: "var(--text-muted)" }}>→</span>
-              <button className="text-sm px-2 py-1 rounded-full border" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
-                End
+                <Calendar size={12} /> {dueDate}
               </button>
               <Dropdown open={dateOpen} onClose={() => setDateOpen(false)} anchorClassName="left-0 top-full mt-2">
                 <MiniCalendar />
@@ -222,7 +346,7 @@ export default function TaskDetailClient() {
           </DetailRow>
 
           <DetailRow label="Labels">
-            <span className="text-sm" style={{ color: "var(--text-muted)" }}>—</span>
+            <span className="text-sm" style={{ color: "var(--text-muted)" }}>{labels.length ? labels.join(", ") : "—"}</span>
           </DetailRow>
           <DetailRow label="Teams">
             <span className="text-sm" style={{ color: "var(--text-muted)" }}>—</span>
@@ -230,27 +354,6 @@ export default function TaskDetailClient() {
           <DetailRow label="Reporter">
             <span className="text-sm" style={{ color: "var(--text-muted)" }}>—</span>
           </DetailRow>
-
-          <div className="mt-6 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-            <span className="flex items-center gap-1.5 font-semibold text-sm mb-3" style={{ color: "var(--text)" }}>
-              <ChevronDown size={14} /> Updates
-            </span>
-            <div className="flex items-start gap-2 mb-3">
-              <span className="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-              </span>
-              <p className="text-sm" style={{ color: "var(--text)" }}>
-                <span className="font-medium">You</span> changed priority from No priority to Urgent
-              </p>
-            </div>
-            <div className="flex items-start gap-2">
-              <Avatar member={currentUser} size={28} />
-              <div className="text-sm" style={{ color: "var(--text)" }}>
-                <span className="font-medium">You</span> posted an update
-                <div className="text-xs" style={{ color: "var(--text-muted)" }}>Aug 2026</div>
-              </div>
-            </div>
-          </div>
         </aside>
       </div>
     </div>
