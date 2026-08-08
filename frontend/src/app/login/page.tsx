@@ -9,7 +9,8 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) router.replace("/tasks");
+    if (loading || !user) return;
+    router.replace(user.profileComplete ? "/tasks" : "/onboarding");
   }, [user, loading, router]);
 
   const handleGuest = async () => {

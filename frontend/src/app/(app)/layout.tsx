@@ -1,12 +1,21 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import { useRequireAuth } from "@/context/auth-context";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useRequireAuth();
+  const router = useRouter();
 
-  if (loading || !user) {
+  useEffect(() => {
+    if (!loading && user && !user.profileComplete) {
+      router.replace("/onboarding");
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user || !user.profileComplete) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-neutral-400">Loading…</div>;
   }
 
