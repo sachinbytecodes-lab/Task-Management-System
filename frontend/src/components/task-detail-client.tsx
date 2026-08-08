@@ -12,6 +12,7 @@ import Avatar from "./avatar";
 import PriorityBadge from "@/components/priority-badge";
 import Dropdown from "@/components/dropdown";
 import MiniCalendar from "@/components/mini-calendar";
+import { gradientForId } from "@/lib/avatar-gradient";
 import { taskDetail as mockTaskDetail, subtasks as mockSubtasks, comments as mockComments, currentUser } from "@/lib/mock-data";
 import { Priority } from "@/lib/types";
 import { api } from "@/lib/api";
@@ -25,7 +26,7 @@ function toMember(m: any) {
     id: m._id ?? m.id ?? "unknown",
     name: m.fullName ?? m.name ?? "Unknown",
     initials: (m.fullName ?? m.name ?? "?")[0],
-    avatarGradient: "from-fuchsia-500 via-purple-500 to-indigo-600",
+    avatarGradient: gradientForId(m._id ?? m.id),
   };
 }
 

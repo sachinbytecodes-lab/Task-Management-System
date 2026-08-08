@@ -31,7 +31,7 @@ export default function UserMenu() {
         }}
         className="w-full flex items-center gap-2 px-1 py-1 rounded-lg hover:bg-black/5 transition"
       >
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-fuchsia-500 via-purple-500 to-indigo-600 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+        <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${user?.avatarGradient ?? "from-fuchsia-500 via-purple-500 to-indigo-600"} flex items-center justify-center text-white text-xs font-semibold shrink-0`}>
           {(user?.name ?? "D")[0]}
         </div>
         <span className="font-medium text-sm flex-1 text-left truncate" style={{ color: "var(--text)" }}>
@@ -42,7 +42,7 @@ export default function UserMenu() {
 
       <Dropdown open={open} onClose={() => setOpen(false)} anchorClassName="left-0 top-full mt-2 w-72">
         <div className="flex flex-col items-center px-4 pt-4 pb-3 border-b" style={{ borderColor: "var(--border)" }}>
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-fuchsia-500 via-purple-500 to-indigo-600 flex items-center justify-center text-white text-xl font-semibold mb-2">
+          <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${user?.avatarGradient ?? "from-fuchsia-500 via-purple-500 to-indigo-600"} flex items-center justify-center text-white text-xl font-semibold mb-2`}>
             {(user?.name ?? "D")[0]}
           </div>
           <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>{user?.name ?? "Dexter"}</div>

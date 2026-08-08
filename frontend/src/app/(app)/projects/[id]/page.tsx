@@ -7,6 +7,7 @@ import { PanelLeft } from "lucide-react";
 import TaskTableSection from "@/components/task-table-section";
 import { tasksByStatus as mockTasksByStatus, projects as mockProjects } from "@/lib/mock-data";
 import { Status, TaskItem } from "@/lib/types";
+import { gradientForId } from "@/lib/avatar-gradient";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/auth-context";
 
@@ -21,7 +22,7 @@ function groupByStatus(tasks: any[]): Record<string, TaskItem[]> {
       title: t.title,
       status: t.status,
       priority: t.priority,
-      member: t.member ? { id: t.member._id, name: t.member.fullName, initials: (t.member.fullName ?? "?")[0], avatarGradient: "from-fuchsia-500 via-purple-500 to-indigo-600" } : null,
+      member: t.member ? { id: t.member._id, name: t.member.fullName, initials: (t.member.fullName ?? "?")[0], avatarGradient: gradientForId(t.member._id) } : null,
       dueDate: t.dueDate ?? "—",
       labels: t.labels ?? [],
     };

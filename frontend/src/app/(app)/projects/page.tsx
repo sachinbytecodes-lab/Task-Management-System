@@ -10,6 +10,7 @@ import Avatar from "@/components/avatar";
 import AddTaskModal from "@/components/add-task-modal";
 import { projects as mockProjects } from "@/lib/mock-data";
 import { Priority, ProjectItem } from "@/lib/types";
+import { gradientForId } from "@/lib/avatar-gradient";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/auth-context";
 
@@ -19,7 +20,7 @@ function normalize(p: any): ProjectItem {
     name: p.name,
     priority: p.priority,
     lead: p.lead
-      ? { id: p.lead._id, name: p.lead.fullName, initials: (p.lead.fullName ?? "?")[0], avatarGradient: "from-fuchsia-500 via-purple-500 to-indigo-600" }
+      ? { id: p.lead._id, name: p.lead.fullName, initials: (p.lead.fullName ?? "?")[0], avatarGradient: gradientForId(p.lead._id) }
       : null,
     dueDate: p.dueDate ?? "—",
   };

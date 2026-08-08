@@ -26,12 +26,12 @@ type SaveState = "idle" | "saving" | "saved" | "offline";
 
 export default function SettingsPage() {
   const { user, loading } = useRequireAuth();
-  const { logout, apiConnected } = useAuth();
+  const { logout, apiConnected, refreshUser } = useAuth();
   const { mode, color, setMode, setColor } = useTheme();
   const [tab, setTab] = useState<"profile" | "theme" | "color">("profile");
-  const [fullName, setFullName] = useState("Dexter");
-  const [title, setTitle] = useState("Designer");
-  const [username, setUsername] = useState("Dexuser");
+  const [fullName, setFullName] = useState(user?.name ?? "");
+  const [title, setTitle] = useState(user?.title ?? "");
+  const [username, setUsername] = useState(user?.username ?? "");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadedOnce = useRef(false);
@@ -59,6 +59,7 @@ export default function SettingsPage() {
     saveTimeout.current = setTimeout(async () => {
       try {
         await api.updateMyProfile(patch);
+        await refreshUser(); // keep sidebar/user-menu display name in sync immediately
         setSaveState("saved");
         setTimeout(() => setSaveState("idle"), 1500);
       } catch {
@@ -109,7 +110,7 @@ export default function SettingsPage() {
             </div>
             <div className="rounded-2xl border" style={{ borderColor: "var(--border)" }}>
               <SettingsRow label="Profile picture">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fuchsia-500 via-purple-500 to-indigo-600" />
+                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${user.avatarGradient}`} />
               </SettingsRow>
               <SettingsRow label="Email">
                 <span className="flex items-center gap-2 text-sm" style={{ color: "var(--text)" }}>
