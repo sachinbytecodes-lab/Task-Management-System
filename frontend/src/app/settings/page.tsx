@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Search, User, Sun, Square, Pencil, Check, Moon } from "lucide-react";
 import { useAuth, useRequireAuth } from "@/context/auth-context";
 import { useTheme, ACCENT_SWATCH, ColorMode } from "@/context/theme-context";
+import { api } from "@/lib/api";
 
 const NAV = [
   { key: "profile", label: "Profile", icon: User },
@@ -21,14 +22,50 @@ const COLOR_LABELS: { key: ColorMode; label: string }[] = [
   { key: "black", label: "Black" },
 ];
 
+type SaveState = "idle" | "saving" | "saved" | "offline";
+
 export default function SettingsPage() {
   const { user, loading } = useRequireAuth();
-  const { logout } = useAuth();
+  const { logout, apiConnected } = useAuth();
   const { mode, color, setMode, setColor } = useTheme();
   const [tab, setTab] = useState<"profile" | "theme" | "color">("profile");
   const [fullName, setFullName] = useState("Dexter");
   const [title, setTitle] = useState("Designer");
   const [username, setUsername] = useState("Dexuser");
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedOnce = useRef(false);
+
+  useEffect(() => {
+    if (!apiConnected) return;
+    api
+      .getMyProfile()
+      .then((profile) => {
+        setFullName(profile.fullName ?? "");
+        setTitle(profile.title ?? "");
+        setUsername(profile.username ?? "");
+        loadedOnce.current = true;
+      })
+      .catch(() => {});
+  }, [apiConnected]);
+
+  const scheduleSave = (patch: { fullName?: string; title?: string; username?: string }) => {
+    if (!apiConnected) {
+      setSaveState("offline");
+      return;
+    }
+    setSaveState("saving");
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(async () => {
+      try {
+        await api.updateMyProfile(patch);
+        setSaveState("saved");
+        setTimeout(() => setSaveState("idle"), 1500);
+      } catch {
+        setSaveState("offline");
+      }
+    }, 500);
+  };
 
   if (loading || !user) return null;
 
@@ -66,7 +103,10 @@ export default function SettingsPage() {
       <div className="flex-1 px-10 py-10 max-w-3xl">
         {tab === "profile" && (
           <>
-            <h1 className="text-3xl font-bold mb-6" style={{ color: "var(--text)" }}>Profile</h1>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold" style={{ color: "var(--text)" }}>Profile</h1>
+              <SaveIndicator state={saveState} />
+            </div>
             <div className="rounded-2xl border" style={{ borderColor: "var(--border)" }}>
               <SettingsRow label="Profile picture">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fuchsia-500 via-purple-500 to-indigo-600" />
@@ -78,13 +118,37 @@ export default function SettingsPage() {
                 </span>
               </SettingsRow>
               <SettingsRow label="Full name">
-                <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="text-right bg-transparent outline-none text-sm w-56" style={{ color: "var(--text)" }} />
+                <input
+                  value={fullName}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    scheduleSave({ fullName: e.target.value });
+                  }}
+                  className="text-right bg-transparent outline-none text-sm w-56"
+                  style={{ color: "var(--text)" }}
+                />
               </SettingsRow>
               <SettingsRow label="Title" sublabel="Your job title or role">
-                <input value={title} onChange={(e) => setTitle(e.target.value)} className="text-right bg-transparent outline-none text-sm w-56" style={{ color: "var(--text)" }} />
+                <input
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    scheduleSave({ title: e.target.value });
+                  }}
+                  className="text-right bg-transparent outline-none text-sm w-56"
+                  style={{ color: "var(--text)" }}
+                />
               </SettingsRow>
               <SettingsRow label="Username" sublabel="One word, like a nickname or first name" last>
-                <input value={username} onChange={(e) => setUsername(e.target.value)} className="text-right bg-transparent outline-none text-sm w-56" style={{ color: "var(--text)" }} />
+                <input
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    scheduleSave({ username: e.target.value });
+                  }}
+                  className="text-right bg-transparent outline-none text-sm w-56"
+                  style={{ color: "var(--text)" }}
+                />
               </SettingsRow>
             </div>
 
@@ -127,6 +191,13 @@ export default function SettingsPage() {
       </div>
     </div>
   );
+}
+
+function SaveIndicator({ state }: { state: SaveState }) {
+  if (state === "idle") return null;
+  const text = state === "saving" ? "Saving…" : state === "saved" ? "Saved" : "Offline — changes not saved";
+  const color = state === "offline" ? "#dc2626" : "var(--text-muted)";
+  return <span className="text-xs" style={{ color }}>{text}</span>;
 }
 
 function SettingsRow({ label, sublabel, children, last }: { label: string; sublabel?: string; children: React.ReactNode; last?: boolean }) {
