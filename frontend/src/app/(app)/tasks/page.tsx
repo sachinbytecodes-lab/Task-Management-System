@@ -3,17 +3,22 @@
 import { useEffect, useMemo, useState } from "react";
 import TopBar from "@/components/top-bar";
 import FieldsMenu, { FieldKey, ViewType } from "@/components/fields-menu";
-import FilterMenu from "@/components/filter-menu";
+import FilterMenu, { FilterState } from "@/components/filter-menu";
 import TaskTableSection from "@/components/task-table-section";
 import KanbanBoard from "@/components/kanban-board";
-import AddTaskModal from "@/components/add-task-modal";
+import TaskFormModal, { NewTaskPayload } from "@/components/task-form-modal";
 import { tasksByStatus as mockData } from "@/lib/mock-data";
-import { Priority, Status, TaskItem } from "@/lib/types";
+import { Status, TaskItem } from "@/lib/types";
 import { gradientForId } from "@/lib/avatar-gradient";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/auth-context";
 
 const STATUSES: Status[] = ["To Do", "Doing", "Completed", "On Hold"];
+
+function toMember(m: any) {
+  if (!m) return null;
+  return { id: m._id, name: m.fullName || m.email, initials: (m.fullName || m.email || "?")[0], avatarGradient: gradientForId(m._id) };
+}
 
 function groupByStatus(tasks: any[]): Record<string, TaskItem[]> {
   const out: Record<string, TaskItem[]> = { "To Do": [], Doing: [], Completed: [], "On Hold": [] };
@@ -23,14 +28,18 @@ function groupByStatus(tasks: any[]): Record<string, TaskItem[]> {
       title: t.title,
       status: t.status,
       priority: t.priority,
-      member: t.member ? { id: t.member._id, name: t.member.fullName, initials: (t.member.fullName ?? "?")[0], avatarGradient: gradientForId(t.member._id) } : null,
+      member: toMember(t.member),
+      reporter: toMember(t.reporter),
       dueDate: t.dueDate ?? "—",
       labels: t.labels ?? [],
+      teams: t.teams ?? [],
     };
     (out[t.status] ??= []).push(item);
   }
   return out;
 }
+
+const emptyFilters: FilterState = { priority: null, status: null, member: null, label: null, reporter: null, team: null };
 
 export default function TasksPage() {
   const { apiConnected } = useAuth();
@@ -47,7 +56,7 @@ export default function TasksPage() {
   });
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState<Priority | null>(null);
+  const [filters, setFilters] = useState<FilterState>(emptyFilters);
   const [modalStatus, setModalStatus] = useState<Status | null>(null);
 
   useEffect(() => {
@@ -66,16 +75,24 @@ export default function TasksPage() {
     for (const s of STATUSES) {
       out[s] = (data[s] ?? [])
         .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
-        .filter((t) => !priorityFilter || t.priority === priorityFilter);
+        .filter((t) => !filters.priority || t.priority === filters.priority)
+        .filter((t) => !filters.status || t.status === filters.status)
+        .filter((t) => !filters.member || t.member?.id === filters.member)
+        .filter((t) => !filters.reporter || t.reporter?.id === filters.reporter)
+        .filter((t) => !filters.label || t.labels.includes(filters.label as string))
+        .filter((t) => !filters.team || (t.teams ?? []).includes(filters.team as string));
     }
     return out;
-  }, [data, search, priorityFilter]);
+  }, [data, search, filters]);
 
-  const addTask = async (title: string, status: Status) => {
+  const totalVisible = STATUSES.reduce((sum, s) => sum + (filtered[s]?.length ?? 0), 0);
+  const isFiltering = search.trim().length > 0 || Object.values(filters).some(Boolean);
+
+  const addTask = async (payload: NewTaskPayload) => {
     if (usingApi) {
       try {
-        const created = await api.createTask({ title, status });
-        setData((d) => ({ ...d, [status]: [...(d[status] ?? []), ...groupByStatus([created])[status]] }));
+        const created = await api.createTask(payload);
+        setData((d) => ({ ...d, [payload.status]: [...(d[payload.status] ?? []), ...groupByStatus([created])[payload.status]] }));
         return;
       } catch {
         // fall through to local add
@@ -83,14 +100,15 @@ export default function TasksPage() {
     }
     const newTask: TaskItem = {
       id: `t-${Date.now()}`,
-      title,
-      status,
-      priority: "No Priority",
+      title: payload.title,
+      status: payload.status as Status,
+      priority: payload.priority as TaskItem["priority"],
       member: null,
-      dueDate: "—",
-      labels: [],
+      dueDate: payload.dueDate ?? "—",
+      labels: payload.labels,
+      teams: payload.teams,
     };
-    setData((d) => ({ ...d, [status]: [...(d[status] ?? []), newTask] }));
+    setData((d) => ({ ...d, [payload.status]: [...(d[payload.status] ?? []), newTask] }));
   };
 
   const moveTask = async (taskId: string, from: Status, to: Status) => {
@@ -122,11 +140,15 @@ export default function TasksPage() {
         searchValue={search}
         onSearchChange={setSearch}
         fieldsSlot={<FieldsMenu view={view} onViewChange={setView} fields={fields} onFieldsChange={setFields} />}
-        filterSlot={<FilterMenu priority={priorityFilter} onPriorityChange={setPriorityFilter} />}
+        filterSlot={<FilterMenu filters={filters} onFiltersChange={setFilters} tasks={Object.values(data).flat()} />}
         onAdd={() => setModalStatus("To Do")}
       />
 
-      {view === "list" ? (
+      {isFiltering && totalVisible === 0 ? (
+        <div className="px-6 py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+          Match not found.
+        </div>
+      ) : view === "list" ? (
         <div className="pb-10">
           {STATUSES.map((s) => (
             <TaskTableSection
@@ -143,7 +165,7 @@ export default function TasksPage() {
       )}
 
       {modalStatus && (
-        <AddTaskModal status={modalStatus} onClose={() => setModalStatus(null)} onCreate={addTask} />
+        <TaskFormModal initialStatus={modalStatus} onClose={() => setModalStatus(null)} onCreate={addTask} />
       )}
     </div>
   );
