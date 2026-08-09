@@ -215,10 +215,14 @@ function SettingsRow({ label, sublabel, children, last }: { label: string; subla
 
 function ThemeOption({ icon, label, checked, onClick }: { icon: React.ReactNode; label: string; checked: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="w-full flex items-center gap-3 px-6 py-4 text-sm hover:bg-black/[0.02]" style={{ color: "var(--text)" }}>
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-6 py-4 text-sm hover:bg-black/[0.02]"
+      style={{ color: checked ? "var(--accent)" : "var(--text)", background: checked ? "var(--bg-subtle)" : "transparent" }}
+    >
       {icon}
       <span className="flex-1 text-left">{label}</span>
-      {checked && <Check size={16} />}
+      {checked && <Check size={16} color="var(--accent)" />}
     </button>
   );
 }

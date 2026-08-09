@@ -69,7 +69,8 @@ export default function TopBar({
 
           <button
             onClick={onAdd}
-            className="flex items-center gap-1.5 rounded-lg bg-neutral-900 text-white text-sm font-medium px-3.5 py-2 hover:opacity-90 transition"
+            className="flex items-center gap-1.5 rounded-lg text-sm font-medium px-3.5 py-2 hover:opacity-90 transition"
+            style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
           >
             <Plus size={16} />
             {addLabel}

@@ -45,8 +45,9 @@ export default function Sidebar() {
                 className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition"
                 style={{
                   background: active ? "var(--bg)" : "transparent",
-                  color: "var(--text)",
+                  color: active ? "var(--accent)" : "var(--text)",
                   boxShadow: active ? "0 1px 2px rgba(0,0,0,0.04)" : "none",
+                  fontWeight: active ? 600 : 400,
                 }}
               >
                 <Icon size={17} strokeWidth={2} />

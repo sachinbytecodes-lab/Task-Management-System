@@ -58,11 +58,11 @@ export default function FieldsMenu({
               onClick={() => onFieldsChange({ ...fields, [f.key]: !fields[f.key] })}
               className="w-4 h-4 rounded flex items-center justify-center border"
               style={{
-                borderColor: fields[f.key] ? "var(--text)" : "var(--border)",
-                background: fields[f.key] ? "var(--text)" : "transparent",
+                borderColor: fields[f.key] ? "var(--accent)" : "var(--border)",
+                background: fields[f.key] ? "var(--accent)" : "transparent",
               }}
             >
-              {fields[f.key] && <Check size={11} color="var(--bg)" />}
+              {fields[f.key] && <Check size={11} color="var(--accent-fg)" />}
             </span>
           </label>
         ))}

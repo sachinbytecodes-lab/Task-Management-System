@@ -158,11 +158,11 @@ function SubOption({
     <button
       onClick={onClick}
       className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-black/5 transition"
-      style={{ color: "var(--text)" }}
+      style={{ color: checked ? "var(--accent)" : "var(--text)" }}
     >
       {icon}
       <span className="flex-1 text-left">{label}</span>
-      {checked && <Check size={14} />}
+      {checked && <Check size={14} color="var(--accent)" />}
     </button>
   );
 }
