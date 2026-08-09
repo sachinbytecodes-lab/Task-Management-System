@@ -8,8 +8,11 @@ import { FieldKey } from "./fields-menu";
 
 const HEADER_LABELS: { key: FieldKey; label: string; width: string }[] = [
   { key: "priority", label: "Priority", width: "w-28" },
-  { key: "members", label: "Members", width: "w-28" },
-  { key: "dueDate", label: "Due Date", width: "w-32" },
+  { key: "members", label: "Members", width: "w-24" },
+  { key: "dueDate", label: "Due Date", width: "w-28" },
+  { key: "status", label: "Status", width: "w-24" },
+  { key: "labels", label: "Labels", width: "w-32" },
+  { key: "reporter", label: "Reporter", width: "w-24" },
 ];
 
 export default function TaskTableSection({
