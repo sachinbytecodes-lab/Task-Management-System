@@ -26,17 +26,18 @@ export const api = {
   getMyProfile: () => request<any>("/users/me"),
   updateMyProfile: (data: { fullName?: string; title?: string; username?: string }) =>
     request<any>("/users/me", { method: "PATCH", body: JSON.stringify(data) }),
+  getUsers: () => request<any[]>("/users"),
 
   getProjects: () => request<any[]>("/projects"),
   getProject: (id: string) => request<any>(`/projects/${id}`),
-  createProject: (data: { name: string; priority?: string; dueDate?: string }) =>
+  createProject: (data: object) =>
     request<any>("/projects", { method: "POST", body: JSON.stringify(data) }),
-  updateProject: (id: string, data: Record<string, unknown>) =>
+  updateProject: (id: string, data: object) =>
     request<any>(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
 
   getTasks: (projectId?: string) => request<any[]>(`/tasks${projectId ? `?project=${projectId}` : ""}`),
   getTask: (id: string) => request<any>(`/tasks/${id}`),
-  createTask: (data: { title: string; status?: string; project?: string }) =>
+  createTask: (data: object) =>
     request<any>("/tasks", { method: "POST", body: JSON.stringify(data) }),
   updateTask: (id: string, data: Record<string, unknown>) =>
     request<any>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),

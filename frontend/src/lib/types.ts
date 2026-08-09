@@ -15,16 +15,23 @@ export interface TaskItem {
   status: Status;
   priority: Priority;
   member?: Member | null;
+  reporter?: Member | null;
   dueDate: string;
   labels: string[];
+  teams?: string[];
   projectId?: string;
 }
 
 export interface ProjectItem {
   id: string;
   name: string;
+  status?: Status;
   priority: Priority;
   lead?: Member | null;
+  members?: Member[];
+  reporter?: Member | null;
+  teams?: string[];
+  labels?: string[];
   dueDate: string;
 }
 
