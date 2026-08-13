@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
 import TopBar from "@/components/top-bar";
+import ProjectFieldsMenu, { ProjectFieldKey } from "@/components/project-fields-menu";
+import FilterMenu, { FilterState } from "@/components/filter-menu";
 import PriorityBadge from "@/components/priority-badge";
 import Avatar from "@/components/avatar";
 import ProjectFormModal, { NewProjectPayload } from "@/components/project-form-modal";
@@ -12,6 +14,8 @@ import { ProjectItem } from "@/lib/types";
 import { gradientForId } from "@/lib/avatar-gradient";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/auth-context";
+
+const emptyFilters: FilterState = { priority: null, status: null, member: null, label: null, reporter: null, team: null };
 
 function toMember(m: any) {
   if (!m) return null;
@@ -39,6 +43,16 @@ export default function ProjectsPage() {
   const [usingApi, setUsingApi] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<FilterState>(emptyFilters);
+  const [fields, setFields] = useState<Record<ProjectFieldKey, boolean>>({
+    status: true,
+    priority: true,
+    lead: true,
+    dueDate: true,
+    labels: false,
+    teams: false,
+    reporter: false,
+  });
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
@@ -52,8 +66,18 @@ export default function ProjectsPage() {
       .catch(() => setUsingApi(false));
   }, [apiConnected]);
 
-  const filtered = projects.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
-  const isSearching = search.trim().length > 0;
+  const filtered = useMemo(() => {
+    return projects
+      .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+      .filter((p) => !filters.priority || p.priority === filters.priority)
+      .filter((p) => !filters.status || p.status === filters.status)
+      .filter((p) => !filters.member || p.lead?.id === filters.member || (p.members ?? []).some((m) => m.id === filters.member))
+      .filter((p) => !filters.reporter || p.reporter?.id === filters.reporter)
+      .filter((p) => !filters.label || (p.labels ?? []).includes(filters.label as string))
+      .filter((p) => !filters.team || (p.teams ?? []).includes(filters.team as string));
+  }, [projects, search, filters]);
+
+  const isFiltering = search.trim().length > 0 || Object.values(filters).some(Boolean);
 
   const addProject = async (payload: NewProjectPayload) => {
     if (usingApi) {
@@ -90,12 +114,14 @@ export default function ProjectsPage() {
         onToggleSearch={() => setSearchOpen((o) => !o)}
         searchValue={search}
         onSearchChange={setSearch}
+        fieldsSlot={<ProjectFieldsMenu fields={fields} onFieldsChange={setFields} />}
+        filterSlot={<FilterMenu filters={filters} onFiltersChange={setFilters} items={projects} />}
         addLabel="Add Project"
         onAdd={() => setModalOpen(true)}
       />
 
       <div className="px-6 pb-10">
-        {isSearching && filtered.length === 0 ? (
+        {isFiltering && filtered.length === 0 ? (
           <div className="py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>
             Match not found.
           </div>
@@ -106,10 +132,13 @@ export default function ProjectsPage() {
               style={{ background: "var(--bg-subtle)", color: "var(--text-muted)" }}
             >
               <span className="flex-1">Projects</span>
-              <span className="w-24">Status</span>
-              <span className="w-28">Priority</span>
-              <span className="w-24">Lead</span>
-              <span className="w-28">Due Date</span>
+              {fields.status && <span className="w-24">Status</span>}
+              {fields.priority && <span className="w-28">Priority</span>}
+              {fields.lead && <span className="w-24">Lead</span>}
+              {fields.dueDate && <span className="w-28">Due Date</span>}
+              {fields.labels && <span className="w-32">Labels</span>}
+              {fields.teams && <span className="w-32">Teams</span>}
+              {fields.reporter && <span className="w-28">Reporter</span>}
               <span className="w-16 text-right">Actions</span>
             </div>
             {filtered.length === 0 && (
@@ -125,10 +154,25 @@ export default function ProjectsPage() {
                 style={{ borderColor: "var(--border)" }}
               >
                 <span className="flex-1 font-medium" style={{ color: "var(--text)" }}>{p.name}</span>
-                <span className="w-24 text-xs" style={{ color: "var(--text-muted)" }}>{p.status ?? "—"}</span>
-                <span className="w-28"><PriorityBadge priority={p.priority} /></span>
-                <span className="w-24"><Avatar member={p.lead} size={26} /></span>
-                <span className="w-28" style={{ color: "var(--text)" }}>{p.dueDate}</span>
+                {fields.status && <span className="w-24 text-xs" style={{ color: "var(--text-muted)" }}>{p.status ?? "—"}</span>}
+                {fields.priority && <span className="w-28"><PriorityBadge priority={p.priority} /></span>}
+                {fields.lead && <span className="w-24"><Avatar member={p.lead} size={26} /></span>}
+                {fields.dueDate && <span className="w-28" style={{ color: "var(--text)" }}>{p.dueDate}</span>}
+                {fields.labels && (
+                  <span className="w-32 text-xs truncate" style={{ color: "var(--text-muted)" }}>
+                    {(p.labels ?? []).join(", ") || "—"}
+                  </span>
+                )}
+                {fields.teams && (
+                  <span className="w-32 text-xs truncate" style={{ color: "var(--text-muted)" }}>
+                    {(p.teams ?? []).join(", ") || "—"}
+                  </span>
+                )}
+                {fields.reporter && (
+                  <span className="w-28 text-xs truncate" style={{ color: "var(--text-muted)" }}>
+                    {p.reporter?.name ?? "—"}
+                  </span>
+                )}
                 <span className="w-16 flex justify-end"><MoreHorizontal size={16} className="opacity-50" /></span>
               </Link>
             ))}
