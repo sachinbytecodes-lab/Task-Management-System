@@ -12,6 +12,7 @@ import Avatar from "./avatar";
 import PriorityBadge from "@/components/priority-badge";
 import Dropdown from "@/components/dropdown";
 import MiniCalendar from "@/components/mini-calendar";
+import SubtaskFormModal from "@/components/subtask-form-modal";
 import { gradientForId } from "@/lib/avatar-gradient";
 import { taskDetail as mockTaskDetail, subtasks as mockSubtasks, comments as mockComments, currentUser } from "@/lib/mock-data";
 import { Priority } from "@/lib/types";
@@ -42,6 +43,7 @@ export default function TaskDetailClient() {
   const [dateOpen, setDateOpen] = useState(false);
   const [reply, setReply] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [subtaskModalOpen, setSubtaskModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -230,14 +232,11 @@ export default function TaskDetailClient() {
               </div>
             ))}
             <button
-              onClick={async () => {
+              onClick={() => {
                 if (isMock || !apiConnected) return;
-                const title = window.prompt("Subtask title");
-                if (!title) return;
-                const updated = await api.addSubtask(task._id, { title });
-                setTask(updated);
+                setSubtaskModalOpen(true);
               }}
-              className="w-full flex items-center gap-2 px-4 py-3 text-sm border-t hover:bg-black/[0.02]"
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm border-t hover:bg-black/[0.02] disabled:opacity-50"
               style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
             >
               <Plus size={14} /> Add Subtasks
@@ -357,6 +356,16 @@ export default function TaskDetailClient() {
           </DetailRow>
         </aside>
       </div>
+
+      {subtaskModalOpen && (
+        <SubtaskFormModal
+          onClose={() => setSubtaskModalOpen(false)}
+          onCreate={async (payload) => {
+            const updated = await api.addSubtask(task._id, payload);
+            setTask(updated);
+          }}
+        />
+      )}
     </div>
   );
 }
