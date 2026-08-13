@@ -41,7 +41,7 @@ export const api = {
     request<any>("/tasks", { method: "POST", body: JSON.stringify(data) }),
   updateTask: (id: string, data: Record<string, unknown>) =>
     request<any>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
-  addSubtask: (id: string, data: { title: string; priority?: string; dueDate?: string }) =>
+  addSubtask: (id: string, data: { title: string; priority?: string; member?: string; dueDate?: string }) =>
     request<any>(`/tasks/${id}/subtasks`, { method: "POST", body: JSON.stringify(data) }),
   addComment: (id: string, text: string) =>
     request<any>(`/tasks/${id}/comments`, { method: "POST", body: JSON.stringify({ text }) }),

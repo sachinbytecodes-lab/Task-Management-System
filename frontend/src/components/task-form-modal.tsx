@@ -10,6 +10,7 @@ const PRIORITIES: Priority[] = ["No Priority", "Urgent", "High", "Medium", "Low"
 
 export interface NewTaskPayload {
   title: string;
+  description?: string;
   status: string;
   priority: string;
   member?: string;
@@ -17,18 +18,22 @@ export interface NewTaskPayload {
   dueDate?: string;
   labels: string[];
   teams: string[];
+  project?: string;
 }
 
 export default function TaskFormModal({
   initialStatus,
+  defaultProjectId,
   onClose,
   onCreate,
 }: {
   initialStatus: Status;
+  defaultProjectId?: string;
   onClose: () => void;
   onCreate: (payload: NewTaskPayload) => void;
 }) {
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [status, setStatus] = useState<string>(initialStatus);
   const [priority, setPriority] = useState<string>("No Priority");
   const [member, setMember] = useState("");
@@ -36,16 +41,20 @@ export default function TaskFormModal({
   const [dueDate, setDueDate] = useState("");
   const [labels, setLabels] = useState("");
   const [teams, setTeams] = useState("");
+  const [project, setProject] = useState(defaultProjectId ?? "");
   const [users, setUsers] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
 
   useEffect(() => {
     api.getUsers().then(setUsers).catch(() => setUsers([]));
+    api.getProjects().then(setProjects).catch(() => setProjects([]));
   }, []);
 
   const submit = () => {
     if (!title.trim()) return;
     onCreate({
       title: title.trim(),
+      description: description.trim() || undefined,
       status,
       priority,
       member: member || undefined,
@@ -53,6 +62,7 @@ export default function TaskFormModal({
       dueDate: dueDate || undefined,
       labels: labels.split(",").map((l) => l.trim()).filter(Boolean),
       teams: teams.split(",").map((t) => t.trim()).filter(Boolean),
+      project: project || undefined,
     });
     onClose();
   };
@@ -79,6 +89,24 @@ export default function TaskFormModal({
             className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
             style={{ borderColor: "var(--border)", color: "var(--text)" }}
           />
+        </Field>
+
+        <Field label="Description" hint="optional">
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What is this task about?"
+            rows={3}
+            className="w-full border rounded-lg px-3 py-2 text-sm outline-none resize-none"
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}
+          />
+        </Field>
+
+        <Field label="Project" hint="optional">
+          <select value={project} onChange={(e) => setProject(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm" style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--bg)" }}>
+            <option value="">No project</option>
+            {projects.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
+          </select>
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
