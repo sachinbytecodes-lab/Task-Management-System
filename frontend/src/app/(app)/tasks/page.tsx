@@ -140,7 +140,7 @@ export default function TasksPage() {
         searchValue={search}
         onSearchChange={setSearch}
         fieldsSlot={<FieldsMenu view={view} onViewChange={setView} fields={fields} onFieldsChange={setFields} />}
-        filterSlot={<FilterMenu filters={filters} onFiltersChange={setFilters} tasks={Object.values(data).flat()} />}
+        filterSlot={<FilterMenu filters={filters} onFiltersChange={setFilters} items={Object.values(data).flat()} />}
         onAdd={() => setModalStatus("To Do")}
       />
 

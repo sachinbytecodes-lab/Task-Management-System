@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Filter, Circle, BarChart2, Users, Calendar, Users2, Tag, User, Check, ChevronRight } from "lucide-react";
 import Dropdown from "./dropdown";
 import { IconButton } from "./top-bar";
-import { Priority, Status, TaskItem } from "@/lib/types";
+import { Priority, Status } from "@/lib/types";
 import { api } from "@/lib/api";
 
 const PRIORITIES: Priority[] = ["No Priority", "Urgent", "High", "Medium", "Low"];
@@ -24,11 +24,11 @@ type CategoryKey = "status" | "priority" | "members" | "dueDate" | "teams" | "la
 export default function FilterMenu({
   filters,
   onFiltersChange,
-  tasks,
+  items,
 }: {
   filters: FilterState;
   onFiltersChange: (f: FilterState) => void;
-  tasks: TaskItem[];
+  items: { labels?: string[]; teams?: string[] }[];
 }) {
   const [open, setOpen] = useState(false);
   const [sub, setSub] = useState<CategoryKey | null>(null);
@@ -40,8 +40,8 @@ export default function FilterMenu({
     }
   }, [open, users.length]);
 
-  const labelOptions = useMemo(() => Array.from(new Set(tasks.flatMap((t) => t.labels ?? []))), [tasks]);
-  const teamOptions = useMemo(() => Array.from(new Set(tasks.flatMap((t) => t.teams ?? []))), [tasks]);
+  const labelOptions = useMemo(() => Array.from(new Set(items.flatMap((t) => t.labels ?? []))), [items]);
+  const teamOptions = useMemo(() => Array.from(new Set(items.flatMap((t) => t.teams ?? []))), [items]);
 
   const activeCount = Object.values(filters).filter(Boolean).length;
 
