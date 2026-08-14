@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Trash2 } from "lucide-react";
 import TopBar from "@/components/top-bar";
 import ProjectFieldsMenu, { ProjectFieldKey } from "@/components/project-fields-menu";
 import FilterMenu, { FilterState } from "@/components/filter-menu";
 import PriorityBadge from "@/components/priority-badge";
 import Avatar from "@/components/avatar";
+import Dropdown from "@/components/dropdown";
 import ProjectFormModal, { NewProjectPayload } from "@/components/project-form-modal";
 import { projects as mockProjects } from "@/lib/mock-data";
 import { ProjectItem } from "@/lib/types";
@@ -54,6 +55,7 @@ export default function ProjectsPage() {
     reporter: false,
   });
   const [modalOpen, setModalOpen] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!apiConnected) return;
@@ -103,6 +105,18 @@ export default function ProjectsPage() {
         labels: payload.labels,
       },
     ]);
+  };
+
+  const deleteProject = async (id: string) => {
+    if (!confirm("Delete this project? Its tasks will stay on the Tasks page but will no longer be linked to it.")) return;
+    setProjects((p) => p.filter((x) => x.id !== id));
+    if (usingApi) {
+      try {
+        await api.deleteProject(id);
+      } catch {
+        // already removed optimistically
+      }
+    }
   };
 
   return (
@@ -172,7 +186,32 @@ export default function ProjectsPage() {
                     {p.reporter?.name ?? "—"}
                   </span>
                 )}
-                <span className="w-16 flex justify-end"><MoreHorizontal size={16} className="opacity-50" /></span>
+                <span className="w-16 flex justify-end relative">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setMenuOpenId(menuOpenId === p.id ? null : p.id);
+                    }}
+                    className="p-1 rounded hover:bg-black/5"
+                  >
+                    <MoreHorizontal size={16} className="opacity-50" />
+                  </button>
+                  <Dropdown open={menuOpenId === p.id} onClose={() => setMenuOpenId(null)} anchorClassName="right-0 top-full mt-1 w-44">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setMenuOpenId(null);
+                        deleteProject(p.id);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-black/5"
+                      style={{ color: "#dc2626" }}
+                    >
+                      <Trash2 size={14} /> Delete project
+                    </button>
+                  </Dropdown>
+                </span>
               </Link>
             ))}
             <button

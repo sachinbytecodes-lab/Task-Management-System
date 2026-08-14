@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { MoreHorizontal, Trash2 } from "lucide-react";
 import TopBar from "@/components/top-bar";
 import FieldsMenu, { FieldKey, ViewType } from "@/components/fields-menu";
 import FilterMenu, { FilterState } from "@/components/filter-menu";
 import TaskTableSection from "@/components/task-table-section";
 import KanbanBoard from "@/components/kanban-board";
 import TaskFormModal, { NewTaskPayload } from "@/components/task-form-modal";
+import Dropdown from "@/components/dropdown";
 import { tasksByStatus as mockTasksByStatus, projects as mockProjects } from "@/lib/mock-data";
 import { Status, TaskItem } from "@/lib/types";
 import { gradientForId } from "@/lib/avatar-gradient";
@@ -44,12 +46,14 @@ function groupByStatus(tasks: any[]): Record<string, TaskItem[]> {
 
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const { apiConnected } = useAuth();
   const [loading, setLoading] = useState(true);
   const [usingApi, setUsingApi] = useState(false);
   const [projectName, setProjectName] = useState<string | null>(null);
   const [data, setData] = useState<Record<string, TaskItem[]>>(mockTasksByStatus);
   const [view, setView] = useState<ViewType>("list");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [fields, setFields] = useState<Record<FieldKey, boolean>>({
     priority: true,
     members: true,
@@ -179,6 +183,18 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const deleteProject = async () => {
+    if (!confirm(`Delete "${projectName ?? "this project"}"? Its tasks will stay on the Tasks page but will no longer be linked to it.`)) return;
+    if (usingApi) {
+      try {
+        await api.deleteProject(params.id);
+      } catch {
+        // proceed to navigate away regardless
+      }
+    }
+    router.push("/projects");
+  };
+
   return (
     <div>
       <TopBar
@@ -197,6 +213,22 @@ export default function ProjectDetailPage() {
         fieldsSlot={<FieldsMenu view={view} onViewChange={setView} fields={fields} onFieldsChange={setFields} />}
         filterSlot={<FilterMenu filters={filters} onFiltersChange={setFilters} items={Object.values(data).flat()} />}
         onAdd={() => setModalStatus("To Do")}
+        rightSlot={
+          <div className="relative">
+            <button onClick={() => setMenuOpen((o) => !o)} className="p-2.5 rounded-lg border hover:bg-black/5" style={{ borderColor: "var(--border)", color: "var(--text)" }} title="Project actions">
+              <MoreHorizontal size={17} />
+            </button>
+            <Dropdown open={menuOpen} onClose={() => setMenuOpen(false)} anchorClassName="right-0 top-full mt-2 w-48">
+              <button
+                onClick={() => { setMenuOpen(false); deleteProject(); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-black/5"
+                style={{ color: "#dc2626" }}
+              >
+                <Trash2 size={14} /> Delete project
+              </button>
+            </Dropdown>
+          </div>
+        }
       />
 
       {loading ? (
