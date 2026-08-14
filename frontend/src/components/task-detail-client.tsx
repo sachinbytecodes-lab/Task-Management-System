@@ -167,14 +167,18 @@ export default function TaskDetailClient() {
   };
 
   const patchTask = async (partial: Record<string, unknown>) => {
-    if (!canEdit) return;
+    if (!canEdit) {
+      if (locked) alert("This task is locked — unlock it first to make changes.");
+      return;
+    }
     const prev = task;
     setTask((t: any) => ({ ...t, ...partial }));
     try {
       const updated = await api.updateTask(task._id, partial);
       setTask(updated);
-    } catch {
+    } catch (err) {
       setTask(prev); // revert on failure
+      alert(err instanceof Error ? err.message : "Couldn't save that change — please try again.");
     }
   };
 
@@ -182,14 +186,22 @@ export default function TaskDetailClient() {
   // itself and for watch/unwatch, both of which must still work on a locked
   // task (the backend already exempts these two fields from its lock check).
   const rawPatchTask = async (partial: Record<string, unknown>) => {
-    if (isMock || !apiConnected) return;
+    if (isMock) {
+      alert("This is demo data (no backend connected), so it can't be saved.");
+      return;
+    }
+    if (!apiConnected) {
+      alert("Not connected to the server right now — this change wasn't saved.");
+      return;
+    }
     const prev = task;
     setTask((t: any) => ({ ...t, ...partial }));
     try {
       const updated = await api.updateTask(task._id, partial);
       setTask(updated);
-    } catch {
+    } catch (err) {
       setTask(prev);
+      alert(err instanceof Error ? err.message : "Couldn't save that change — please try again.");
     }
   };
 
@@ -288,8 +300,9 @@ export default function TaskDetailClient() {
               <IconBtn onClick={toggleLock} active={locked} title={locked ? "Unlock task" : "Lock task (prevent edits)"}>
                 {locked ? <Lock size={15} /> : <LockOpen size={15} />}
               </IconBtn>
-              <IconBtn onClick={toggleWatch} active={isWatching} title={isWatching ? "Stop watching" : "Watch this task"}>
-                <Eye size={15} /><span className="text-xs ml-1">{watchers.length}</span>
+              <IconBtn onClick={toggleWatch} active={isWatching} title={isWatching ? "You're watching this task — click to stop watching. Watchers appear in the Updates log for every change." : "Watch this task to keep it on your radar (click to start)"}>
+                <Eye size={15} />
+                <span className="text-xs ml-1">{isWatching ? "Watching" : watchers.length > 0 ? watchers.length : "Watch"}</span>
               </IconBtn>
               <IconBtn onClick={copyLink} active={copied} title="Copy link to this task">
                 {copied ? <Check size={15} /> : <Share2 size={15} />}
