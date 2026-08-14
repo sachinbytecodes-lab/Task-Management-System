@@ -74,6 +74,7 @@ export default function TaskDetailClient() {
   // UI-only chrome: right panel visibility, details section collapse, share feedback
   const [detailsPanelOpen, setDetailsPanelOpen] = useState(true);
   const [detailsSectionOpen, setDetailsSectionOpen] = useState(true);
+  const [updatesSectionOpen, setUpdatesSectionOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [visibleFields, setVisibleFields] = useState<Record<DetailFieldKey, boolean>>({
     status: true, priority: true, members: true, dates: true, labels: true, teams: true, reporter: true,
@@ -177,15 +178,29 @@ export default function TaskDetailClient() {
     }
   };
 
-  const toggleLock = () => {
+  // Bypasses the "locked blocks edits" gate — used only for the lock toggle
+  // itself and for watch/unwatch, both of which must still work on a locked
+  // task (the backend already exempts these two fields from its lock check).
+  const rawPatchTask = async (partial: Record<string, unknown>) => {
     if (isMock || !apiConnected) return;
-    patchTask({ locked: !task.locked });
+    const prev = task;
+    setTask((t: any) => ({ ...t, ...partial }));
+    try {
+      const updated = await api.updateTask(task._id, partial);
+      setTask(updated);
+    } catch {
+      setTask(prev);
+    }
+  };
+
+  const toggleLock = () => {
+    rawPatchTask({ locked: !task.locked });
   };
 
   const toggleWatch = () => {
-    if (isMock || !apiConnected || !user) return;
+    if (!user) return;
     const next = isWatching ? watcherIds.filter((id: string) => id !== user.id) : [...watcherIds, user.id];
-    patchTask({ watchers: next });
+    rawPatchTask({ watchers: next });
   };
 
   const copyLink = async () => {
@@ -586,27 +601,35 @@ export default function TaskDetailClient() {
             )}
 
             <div className="mt-6 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-              <span className="flex items-center gap-1.5 font-semibold text-sm mb-3" style={{ color: "var(--text)" }}>
-                <ChevronDown size={14} /> Updates
-              </span>
-              {updates.length === 0 && (
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>No updates yet — changes to this task will show up here.</p>
-              )}
-              {[...updates].reverse().map((u: any, i: number) => {
-                const uMember = toMember(u.user);
-                const isYou = user && (u.user?._id === user.id || u.user === user.id);
-                return (
-                  <div key={u._id ?? i} className="flex items-start gap-2 mb-3">
-                    <Avatar member={uMember} size={26} />
-                    <div className="text-sm" style={{ color: "var(--text)" }}>
-                      <span className="font-medium">{isYou ? "You" : uMember?.name ?? "Someone"}</span> {u.message}
-                      <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        {u.createdAt ? new Date(u.createdAt).toLocaleString() : ""}
+              <button
+                onClick={() => setUpdatesSectionOpen((o) => !o)}
+                className="flex items-center gap-1.5 font-semibold text-sm mb-3"
+                style={{ color: "var(--text)" }}
+              >
+                <ChevronDown size={14} className={`transition-transform ${updatesSectionOpen ? "" : "-rotate-90"}`} /> Updates
+              </button>
+              {updatesSectionOpen && (
+                <>
+                  {updates.length === 0 && (
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>No updates yet — changes to this task will show up here.</p>
+                  )}
+                  {[...updates].reverse().map((u: any, i: number) => {
+                    const uMember = toMember(u.user);
+                    const isYou = user && (u.user?._id === user.id || u.user === user.id);
+                    return (
+                      <div key={u._id ?? i} className="flex items-start gap-2 mb-3">
+                        <Avatar member={uMember} size={26} />
+                        <div className="text-sm" style={{ color: "var(--text)" }}>
+                          <span className="font-medium">{isYou ? "You" : uMember?.name ?? "Someone"}</span> {u.message}
+                          <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                            {u.createdAt ? new Date(u.createdAt).toLocaleString() : ""}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </>
+              )}
             </div>
           </aside>
         )}
