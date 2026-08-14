@@ -130,11 +130,29 @@ export default function TasksPage() {
     }
   };
 
+  const deleteTask = async (taskId: string, status: Status) => {
+    setData((d) => ({ ...d, [status]: (d[status] ?? []).filter((t) => t.id !== taskId) }));
+    if (usingApi) {
+      try {
+        await api.deleteTask(taskId);
+      } catch {
+        // already removed optimistically
+      }
+    }
+  };
+
+  const clearColumn = async (status: Status) => {
+    const ids = (data[status] ?? []).map((t) => t.id);
+    setData((d) => ({ ...d, [status]: [] }));
+    if (usingApi) {
+      await Promise.allSettled(ids.map((id) => api.deleteTask(id)));
+    }
+  };
+
   return (
     <div>
       <TopBar
         title="Tasks"
-        onToggleSidebar={() => {}}
         searchOpen={searchOpen}
         onToggleSearch={() => setSearchOpen((o) => !o)}
         searchValue={search}
@@ -161,7 +179,7 @@ export default function TasksPage() {
           ))}
         </div>
       ) : (
-        <KanbanBoard tasksByStatus={filtered} onAddTask={setModalStatus} onMoveTask={moveTask} />
+        <KanbanBoard tasksByStatus={filtered} onAddTask={setModalStatus} onMoveTask={moveTask} onClearColumn={clearColumn} onDeleteTask={deleteTask} />
       )}
 
       {modalStatus && (

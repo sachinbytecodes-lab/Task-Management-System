@@ -109,7 +109,6 @@ export default function ProjectsPage() {
     <div>
       <TopBar
         title="Projects"
-        onToggleSidebar={() => {}}
         searchOpen={searchOpen}
         onToggleSearch={() => setSearchOpen((o) => !o)}
         searchValue={search}

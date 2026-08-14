@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LayoutGrid, Briefcase, ChevronDown } from "lucide-react";
 import UserMenu from "./user-menu";
 import { useState } from "react";
+import { useSidebar } from "@/context/sidebar-context";
 
 const NAV = [
   { href: "/tasks", label: "Tasks", icon: LayoutGrid },
@@ -14,6 +15,38 @@ const NAV = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [workspaceOpen, setWorkspaceOpen] = useState(true);
+  const { collapsed } = useSidebar();
+
+  if (collapsed) {
+    return (
+      <aside
+        className="w-[64px] shrink-0 border-r flex flex-col items-center gap-3 px-2 py-4"
+        style={{ borderColor: "var(--border)", background: "var(--bg-subtle)" }}
+      >
+        <UserMenu collapsed />
+        <div className="w-full h-px" style={{ background: "var(--border)" }} />
+        {NAV.map((item) => {
+          const active = pathname.startsWith(item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={item.label}
+              className="w-10 h-10 flex items-center justify-center rounded-lg transition"
+              style={{
+                background: active ? "var(--bg)" : "transparent",
+                color: active ? "var(--accent)" : "var(--text)",
+                boxShadow: active ? "0 1px 2px rgba(0,0,0,0.04)" : "none",
+              }}
+            >
+              <Icon size={18} strokeWidth={2} />
+            </Link>
+          );
+        })}
+      </aside>
+    );
+  }
 
   return (
     <aside

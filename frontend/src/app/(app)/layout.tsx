@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import { useRequireAuth } from "@/context/auth-context";
+import { SidebarProvider } from "@/context/sidebar-context";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useRequireAuth();
@@ -20,9 +21,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ background: "var(--bg)" }}>
-      <Sidebar />
-      <div className="flex-1 min-w-0">{children}</div>
-    </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex" style={{ background: "var(--bg)" }}>
+        <Sidebar />
+        <div className="flex-1 min-w-0">{children}</div>
+      </div>
+    </SidebarProvider>
   );
 }

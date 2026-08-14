@@ -2,11 +2,11 @@
 
 import { Search, Columns3, Filter, Plus, PanelLeft } from "lucide-react";
 import { ReactNode } from "react";
+import { useSidebar } from "@/context/sidebar-context";
 
 export default function TopBar({
   title,
   breadcrumb,
-  onToggleSidebar,
   searchOpen,
   onToggleSearch,
   searchValue,
@@ -15,10 +15,12 @@ export default function TopBar({
   filterSlot,
   addLabel = "Add Task",
   onAdd,
+  showSearch = true,
+  showAdd = true,
+  rightSlot,
 }: {
   title: string;
   breadcrumb?: ReactNode;
-  onToggleSidebar?: () => void;
   searchOpen?: boolean;
   onToggleSearch?: () => void;
   searchValue?: string;
@@ -27,11 +29,16 @@ export default function TopBar({
   filterSlot?: ReactNode;
   addLabel?: string;
   onAdd?: () => void;
+  showSearch?: boolean;
+  showAdd?: boolean;
+  rightSlot?: ReactNode;
 }) {
+  const { collapsed, toggle } = useSidebar();
+
   return (
     <div>
       <div className="flex items-center gap-2 px-6 py-3 border-b" style={{ borderColor: "var(--border)" }}>
-        <button onClick={onToggleSidebar} className="p-1 rounded hover:bg-black/5">
+        <button onClick={toggle} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="p-1 rounded hover:bg-black/5">
           <PanelLeft size={18} style={{ color: "var(--text)" }} />
         </button>
         <div className="w-px h-4" style={{ background: "var(--border)" }} />
@@ -39,10 +46,10 @@ export default function TopBar({
       </div>
 
       <div className="flex items-center justify-between px-6 py-4">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>{title}</h1>
+        {title && <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>{title}</h1>}
 
-        <div className="flex items-center gap-2">
-          {searchOpen ? (
+        <div className="flex items-center gap-2 ml-auto">
+          {showSearch && (searchOpen ? (
             <div
               className="flex items-center gap-2 border rounded-lg px-3 py-2 w-64"
               style={{ borderColor: "var(--border)" }}
@@ -62,19 +69,23 @@ export default function TopBar({
             <IconButton onClick={onToggleSearch}>
               <Search size={17} />
             </IconButton>
-          )}
+          ))}
 
           {fieldsSlot}
           {filterSlot}
 
-          <button
-            onClick={onAdd}
-            className="flex items-center gap-1.5 rounded-lg text-sm font-medium px-3.5 py-2 hover:opacity-90 transition"
-            style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-          >
-            <Plus size={16} />
-            {addLabel}
-          </button>
+          {showAdd && (
+            <button
+              onClick={onAdd}
+              className="flex items-center gap-1.5 rounded-lg text-sm font-medium px-3.5 py-2 hover:opacity-90 transition"
+              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+            >
+              <Plus size={16} />
+              {addLabel}
+            </button>
+          )}
+
+          {rightSlot}
         </div>
       </div>
     </div>
