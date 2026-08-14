@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Task, TaskDocument } from './schemas/task.schema';
 import { AddCommentDto, AddSubtaskDto, CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
 
-const POPULATE_FIELDS = ['member', 'reporter', 'comments.author', 'subtasks.member'];
+const POPULATE_FIELDS = ['member', 'reporter', 'comments.author', 'subtasks.member', 'updates.user', 'watchers'];
 
 @Injectable()
 export class TasksService {
@@ -32,12 +32,73 @@ export class TasksService {
     return this.model.create({ ...dto, owner: ownerId, reporter: dto.reporter ?? ownerId });
   }
 
+  // Builds a human-readable activity log entry for every tracked field that
+  // actually changed, so the "Updates" section on the task detail page has
+  // real history instead of the old two hardcoded mock lines.
+  private buildUpdateLog(existing: TaskDocument, dto: UpdateTaskDto, actorId: string) {
+    const logs: { user: string; message: string }[] = [];
+    const push = (message: string) => logs.push({ user: actorId, message });
+
+    if (dto.title !== undefined && dto.title !== existing.title) {
+      push('renamed the task');
+    }
+    if (dto.status !== undefined && dto.status !== existing.status) {
+      push(`changed status from "${existing.status}" to "${dto.status}"`);
+    }
+    if (dto.priority !== undefined && dto.priority !== existing.priority) {
+      push(`changed priority from "${existing.priority}" to "${dto.priority}"`);
+    }
+    if (dto.member !== undefined) {
+      const next = dto.member || null;
+      const prev = existing.member ? existing.member.toString() : null;
+      if (next !== prev) push(next ? 'assigned a member' : 'removed the assigned member');
+    }
+    if (dto.reporter !== undefined) {
+      const next = dto.reporter || null;
+      const prev = existing.reporter ? existing.reporter.toString() : null;
+      if (next !== prev) push('changed the reporter');
+    }
+    if (dto.dueDate !== undefined && dto.dueDate !== existing.dueDate) {
+      push(`set the due date to "${dto.dueDate}"`);
+    }
+    if (dto.labels !== undefined && JSON.stringify(dto.labels) !== JSON.stringify(existing.labels)) {
+      push('updated labels');
+    }
+    if (dto.teams !== undefined && JSON.stringify(dto.teams) !== JSON.stringify(existing.teams)) {
+      push('updated teams');
+    }
+    if (dto.description !== undefined && dto.description !== existing.description) {
+      push('updated the description');
+    }
+    if (dto.locked !== undefined && dto.locked !== existing.locked) {
+      push(dto.locked ? 'locked this task' : 'unlocked this task');
+    }
+    return logs;
+  }
+
   async update(ownerId: string, id: string, dto: UpdateTaskDto) {
-    const task = await this.model
-      .findOneAndUpdate({ _id: id, owner: ownerId }, dto, { new: true })
-      .populate('member')
-      .populate('reporter')
-      .exec();
+    const existing = await this.model.findOne({ _id: id, owner: ownerId }).exec();
+    if (!existing) throw new NotFoundException('Task not found');
+
+    // Watching/unwatching and unlocking itself must still work on a locked task —
+    // only block edits to actual task fields.
+    const editKeys = Object.keys(dto).filter((k) => k !== 'locked' && k !== 'watchers');
+    if (existing.locked && editKeys.length > 0) {
+      throw new ForbiddenException('Task is locked');
+    }
+
+    const logs = this.buildUpdateLog(existing, dto, ownerId);
+
+    const setFields: Record<string, unknown> = { ...dto };
+    if ('member' in setFields && setFields.member === '') setFields.member = null;
+    if ('reporter' in setFields && setFields.reporter === '') setFields.reporter = null;
+
+    const update: Record<string, unknown> = { $set: setFields };
+    if (logs.length) update.$push = { updates: { $each: logs } };
+
+    let query = this.model.findOneAndUpdate({ _id: id, owner: ownerId }, update, { new: true });
+    for (const f of POPULATE_FIELDS) query = query.populate(f);
+    const task = await query.exec();
     if (!task) throw new NotFoundException('Task not found');
     return task;
   }
@@ -52,8 +113,10 @@ export class TasksService {
     const task = await this.model.findOne({ _id: id, owner: ownerId }).exec();
     if (!task) throw new NotFoundException('Task not found');
     task.subtasks.push(dto as any);
+    task.updates.push({ user: ownerId as any, message: `added subtask "${dto.title}"` } as any);
     await task.save();
-    return task.populate('subtasks.member');
+    for (const f of POPULATE_FIELDS) await task.populate(f);
+    return task;
   }
 
   async addComment(ownerId: string, id: string, authorId: string, dto: AddCommentDto) {
@@ -61,6 +124,7 @@ export class TasksService {
     if (!task) throw new NotFoundException('Task not found');
     task.comments.push({ author: authorId, text: dto.text } as any);
     await task.save();
-    return task.populate('comments.author');
+    for (const f of POPULATE_FIELDS) await task.populate(f);
+    return task;
   }
 }

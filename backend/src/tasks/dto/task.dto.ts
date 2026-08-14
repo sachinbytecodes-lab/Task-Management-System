@@ -1,4 +1,4 @@
-import { IsArray, IsIn, IsMongoId, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsBoolean, IsIn, IsMongoId, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PRIORITIES, STATUSES } from '../schemas/task.schema';
 
 export class CreateTaskDto {
@@ -19,12 +19,12 @@ export class CreateTaskDto {
   priority?: string;
 
   @IsOptional()
-  @IsMongoId()
-  member?: string;
+  @IsString()
+  member?: string; // empty string clears the assignee
 
   @IsOptional()
-  @IsMongoId()
-  reporter?: string;
+  @IsString()
+  reporter?: string; // empty string clears the reporter
 
   @IsOptional()
   @IsString()
@@ -62,12 +62,12 @@ export class UpdateTaskDto {
   priority?: string;
 
   @IsOptional()
-  @IsMongoId()
-  member?: string;
+  @IsString()
+  member?: string; // empty string clears the assignee
 
   @IsOptional()
-  @IsMongoId()
-  reporter?: string;
+  @IsString()
+  reporter?: string; // empty string clears the reporter
 
   @IsOptional()
   @IsString()
@@ -84,6 +84,14 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsMongoId()
   project?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  locked?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  watchers?: string[];
 }
 
 export class AddSubtaskDto {
@@ -96,7 +104,7 @@ export class AddSubtaskDto {
   priority?: string;
 
   @IsOptional()
-  @IsMongoId()
+  @IsString()
   member?: string;
 
   @IsOptional()

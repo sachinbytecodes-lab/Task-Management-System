@@ -32,6 +32,16 @@ export class Subtask {
 }
 export const SubtaskSchema = SchemaFactory.createForClass(Subtask);
 
+@Schema({ _id: false, timestamps: { createdAt: true, updatedAt: false } })
+export class UpdateLogEntry {
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  user: Types.ObjectId;
+
+  @Prop({ required: true })
+  message: string;
+}
+export const UpdateLogEntrySchema = SchemaFactory.createForClass(UpdateLogEntry);
+
 @Schema({ timestamps: true })
 export class Task {
   _id: Types.ObjectId;
@@ -80,6 +90,20 @@ export class Task {
 
   @Prop({ type: [CommentSchema], default: [] })
   comments: Comment[];
+
+  // Lock icon in the task detail header — a locked task blocks edits
+  // (priority/status/members/etc, subtasks, comments) from the UI.
+  @Prop({ default: false })
+  locked: boolean;
+
+  // Eye icon — users who are "watching" this task. Toggled by the current user.
+  @Prop({ type: [Types.ObjectId], ref: 'User', default: [] })
+  watchers: Types.ObjectId[];
+
+  // Updates section — an append-only activity log of field changes,
+  // populated automatically by the service whenever a tracked field changes.
+  @Prop({ type: [UpdateLogEntrySchema], default: [] })
+  updates: UpdateLogEntry[];
 }
 
 export const TaskSchema = SchemaFactory.createForClass(Task);

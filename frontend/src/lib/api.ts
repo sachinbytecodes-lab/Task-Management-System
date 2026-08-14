@@ -34,6 +34,7 @@ export const api = {
     request<any>("/projects", { method: "POST", body: JSON.stringify(data) }),
   updateProject: (id: string, data: object) =>
     request<any>(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteProject: (id: string) => request<{ success: boolean }>(`/projects/${id}`, { method: "DELETE" }),
 
   getTasks: (projectId?: string) => request<any[]>(`/tasks${projectId ? `?project=${projectId}` : ""}`),
   getTask: (id: string) => request<any>(`/tasks/${id}`),
@@ -41,6 +42,7 @@ export const api = {
     request<any>("/tasks", { method: "POST", body: JSON.stringify(data) }),
   updateTask: (id: string, data: Record<string, unknown>) =>
     request<any>(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteTask: (id: string) => request<{ success: boolean }>(`/tasks/${id}`, { method: "DELETE" }),
   addSubtask: (id: string, data: { title: string; priority?: string; member?: string; dueDate?: string }) =>
     request<any>(`/tasks/${id}/subtasks`, { method: "POST", body: JSON.stringify(data) }),
   addComment: (id: string, text: string) =>
