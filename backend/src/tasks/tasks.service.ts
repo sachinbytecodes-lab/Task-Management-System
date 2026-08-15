@@ -82,8 +82,29 @@ export class TasksService {
 
     // Watching/unwatching and unlocking itself must still work on a locked task —
     // only block edits to actual task fields.
-    const editKeys = Object.keys(dto).filter((k) => k !== 'locked' && k !== 'watchers');
-    if (existing.locked && editKeys.length > 0) {
+    //
+    // NOTE: this must check each field's *value* against undefined, not use
+    // Object.keys(dto) — under this project's TS target (ES2023), every
+    // declared class field becomes an own property (initialized to
+    // undefined) the moment the DTO is constructed, whether or not the
+    // client actually sent it. Object.keys(dto) therefore lists *all*
+    // UpdateTaskDto fields, not just the ones present in the request body,
+    // which made this guard fire on every request — including a bare
+    // { locked: false } unlock call — because it always "saw" other
+    // (undefined-valued) fields as present.
+    const isEditingRealFields =
+      dto.title !== undefined ||
+      dto.description !== undefined ||
+      dto.status !== undefined ||
+      dto.priority !== undefined ||
+      dto.member !== undefined ||
+      dto.reporter !== undefined ||
+      dto.dueDate !== undefined ||
+      dto.labels !== undefined ||
+      dto.teams !== undefined ||
+      dto.project !== undefined;
+
+    if (existing.locked && isEditingRealFields) {
       throw new ForbiddenException('Task is locked');
     }
 
