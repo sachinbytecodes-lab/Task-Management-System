@@ -75,6 +75,7 @@ export default function TaskDetailClient() {
   const [detailsPanelOpen, setDetailsPanelOpen] = useState(true);
   const [detailsSectionOpen, setDetailsSectionOpen] = useState(true);
   const [updatesSectionOpen, setUpdatesSectionOpen] = useState(true);
+  const [subtasksSectionOpen, setSubtasksSectionOpen] = useState(true);
   const [copied, setCopied] = useState(false);
   const [visibleFields, setVisibleFields] = useState<Record<DetailFieldKey, boolean>>({
     status: true, priority: true, members: true, dates: true, labels: true, teams: true, reporter: true,
@@ -329,6 +330,15 @@ export default function TaskDetailClient() {
           <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>{description}</p>
 
           <Field label="Properties">
+            {teams.length > 0 && teams.map((t: string) => (
+              <span
+                key={t}
+                className="inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full border"
+                style={{ borderColor: "var(--border)", color: "var(--text)" }}
+              >
+                {t}
+              </span>
+            ))}
             <span
               className="inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full"
               style={{ background: "#fee2e2", color: "#dc2626" }}
@@ -350,10 +360,23 @@ export default function TaskDetailClient() {
             ))}
           </Field>
 
+          <Field label="Resources">
+            <button
+              onClick={() => alert("Attaching documents/links isn't wired up to storage yet — this is a placeholder for that flow.")}
+              className="text-sm flex items-center gap-1.5"
+              style={{ color: "var(--text-muted)" }}
+            >
+              <Paperclip size={14} /> Add document or link…
+            </button>
+          </Field>
+
           <div className="flex items-center gap-1.5 mt-6 mb-2">
-            <ChevronDown size={14} />
-            <h2 className="font-semibold text-sm" style={{ color: "var(--text)" }}>Subtasks</h2>
+            <button onClick={() => setSubtasksSectionOpen((o) => !o)} className="flex items-center gap-1.5">
+              <ChevronDown size={14} className={`transition-transform ${subtasksSectionOpen ? "" : "-rotate-90"}`} />
+              <h2 className="font-semibold text-sm" style={{ color: "var(--text)" }}>Subtasks</h2>
+            </button>
           </div>
+          {subtasksSectionOpen && (
           <div className="rounded-xl border overflow-hidden mb-8" style={{ borderColor: "var(--border)" }}>
             <div
               className="flex items-center px-4 py-2.5 text-xs font-medium"
@@ -389,6 +412,7 @@ export default function TaskDetailClient() {
               <Plus size={14} /> Add Subtasks
             </button>
           </div>
+          )}
 
           <h2 className="font-semibold text-sm mb-3" style={{ color: "var(--text)" }}>Comments</h2>
           {commentList.length === 0 && (
