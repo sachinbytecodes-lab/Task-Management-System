@@ -117,3 +117,13 @@ export class AddCommentDto {
   @MaxLength(2000)
   text: string;
 }
+
+export class AddResourceDto {
+  @IsString()
+  @MaxLength(200)
+  title: string;
+
+  @IsString()
+  @MaxLength(2000)
+  url: string;
+}

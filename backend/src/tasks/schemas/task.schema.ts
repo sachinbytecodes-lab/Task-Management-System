@@ -42,6 +42,16 @@ export class UpdateLogEntry {
 }
 export const UpdateLogEntrySchema = SchemaFactory.createForClass(UpdateLogEntry);
 
+@Schema({ _id: true, timestamps: { createdAt: true, updatedAt: false } })
+export class Resource {
+  @Prop({ required: true })
+  title: string;
+
+  @Prop({ required: true })
+  url: string;
+}
+export const ResourceSchema = SchemaFactory.createForClass(Resource);
+
 @Schema({ timestamps: true })
 export class Task {
   _id: Types.ObjectId;
@@ -104,6 +114,12 @@ export class Task {
   // populated automatically by the service whenever a tracked field changes.
   @Prop({ type: [UpdateLogEntrySchema], default: [] })
   updates: UpdateLogEntry[];
+
+  // Resources section — links to external documents (Drive, Notion, a PDF
+  // URL, etc). Actual file uploads would need object storage (e.g. S3),
+  // which isn't part of this stack; this stores link references only.
+  @Prop({ type: [ResourceSchema], default: [] })
+  resources: Resource[];
 }
 
 export const TaskSchema = SchemaFactory.createForClass(Task);

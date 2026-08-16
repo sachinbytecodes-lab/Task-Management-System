@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { TasksService } from './tasks.service';
-import { AddCommentDto, AddSubtaskDto, CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
+import { AddCommentDto, AddResourceDto, AddSubtaskDto, CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 function ownerId(req: Request) {
@@ -46,5 +46,15 @@ export class TasksController {
   @Post(':id/comments')
   addComment(@Req() req: Request, @Param('id') id: string, @Body() dto: AddCommentDto) {
     return this.service.addComment(ownerId(req), id, ownerId(req), dto);
+  }
+
+  @Post(':id/resources')
+  addResource(@Req() req: Request, @Param('id') id: string, @Body() dto: AddResourceDto) {
+    return this.service.addResource(ownerId(req), id, dto);
+  }
+
+  @Delete(':id/resources/:resourceId')
+  removeResource(@Req() req: Request, @Param('id') id: string, @Param('resourceId') resourceId: string) {
+    return this.service.removeResource(ownerId(req), id, resourceId);
   }
 }

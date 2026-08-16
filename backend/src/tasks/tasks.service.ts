@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Task, TaskDocument } from './schemas/task.schema';
-import { AddCommentDto, AddSubtaskDto, CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
+import { AddCommentDto, AddResourceDto, AddSubtaskDto, CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
 
 const POPULATE_FIELDS = ['member', 'reporter', 'comments.author', 'subtasks.member', 'updates.user', 'watchers'];
 
@@ -144,6 +144,29 @@ export class TasksService {
     const task = await this.model.findOne({ _id: id, owner: ownerId }).exec();
     if (!task) throw new NotFoundException('Task not found');
     task.comments.push({ author: authorId, text: dto.text } as any);
+    await task.save();
+    for (const f of POPULATE_FIELDS) await task.populate(f);
+    return task;
+  }
+
+  async addResource(ownerId: string, id: string, dto: AddResourceDto) {
+    const task = await this.model.findOne({ _id: id, owner: ownerId }).exec();
+    if (!task) throw new NotFoundException('Task not found');
+    if (task.locked) throw new ForbiddenException('Task is locked');
+    task.resources.push(dto as any);
+    task.updates.push({ user: ownerId as any, message: `attached "${dto.title}"` } as any);
+    await task.save();
+    for (const f of POPULATE_FIELDS) await task.populate(f);
+    return task;
+  }
+
+  async removeResource(ownerId: string, id: string, resourceId: string) {
+    const task = await this.model.findOne({ _id: id, owner: ownerId }).exec();
+    if (!task) throw new NotFoundException('Task not found');
+    if (task.locked) throw new ForbiddenException('Task is locked');
+    const resource = task.resources.find((r: any) => r._id.toString() === resourceId);
+    task.resources = task.resources.filter((r: any) => r._id.toString() !== resourceId) as any;
+    if (resource) task.updates.push({ user: ownerId as any, message: `removed "${resource.title}"` } as any);
     await task.save();
     for (const f of POPULATE_FIELDS) await task.populate(f);
     return task;
