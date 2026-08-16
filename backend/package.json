@@ -1,7 +1,7 @@
 {
   "name": "pyramid-api",
   "version": "0.0.1",
-  "description": "",
+  "description": "Pyramid task management API — NestJS + MongoDB backend for the frontend assessment app.",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
