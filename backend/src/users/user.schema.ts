@@ -7,7 +7,11 @@ export type UserDocument = User & Document;
 export class User {
   _id: Types.ObjectId;
 
-  @Prop({ required: true })
+  // Not `required` — a fresh Google signup is intentionally created with an
+  // empty fullName (see UsersService.createGoogleUser) so /onboarding can
+  // prompt the person to fill it in themselves. `profileComplete` below is
+  // what actually gates access, not this field.
+  @Prop({ default: '' })
   fullName: string;
 
   @Prop({ required: true, unique: true, index: true })

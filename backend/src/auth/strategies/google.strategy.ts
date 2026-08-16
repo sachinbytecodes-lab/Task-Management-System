@@ -16,10 +16,18 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
   validate(_accessToken: string, _refreshToken: string, profile: Profile, done: VerifyCallback) {
     const email = profile.emails?.[0]?.value;
+
+    // Google doesn't always return displayName (some accounts have it blank,
+    // or the consent screen scope config can omit it). Fall back through
+    // given+family name, then the email's local part, so we never try to
+    // save a User with an empty fullName (which Mongoose rejects).
+    const nameFromParts = [profile.name?.givenName, profile.name?.familyName].filter(Boolean).join(' ').trim();
+    const fullName = profile.displayName?.trim() || nameFromParts || email?.split('@')[0] || 'Google User';
+
     const user = {
       googleId: profile.id,
       email,
-      fullName: profile.displayName,
+      fullName,
       avatarUrl: profile.photos?.[0]?.value,
     };
     done(null, user);
