@@ -47,6 +47,10 @@ export const api = {
     request<any>(`/tasks/${id}/subtasks`, { method: "POST", body: JSON.stringify(data) }),
   addComment: (id: string, text: string) =>
     request<any>(`/tasks/${id}/comments`, { method: "POST", body: JSON.stringify({ text }) }),
+  addResource: (id: string, data: { title: string; url: string }) =>
+    request<any>(`/tasks/${id}/resources`, { method: "POST", body: JSON.stringify(data) }),
+  removeResource: (id: string, resourceId: string) =>
+    request<any>(`/tasks/${id}/resources/${resourceId}`, { method: "DELETE" }),
 };
 
 export { API_URL };

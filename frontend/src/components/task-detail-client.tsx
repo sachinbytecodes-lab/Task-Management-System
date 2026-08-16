@@ -68,6 +68,7 @@ export default function TaskDetailClient() {
   const [datesOpen, setDatesOpen] = useState(false);
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [teamsOpen, setTeamsOpen] = useState(false);
+  const [resourceOpen, setResourceOpen] = useState(false);
   const [topMenuOpen, setTopMenuOpen] = useState(false);
   const [fieldsSettingsOpen, setFieldsSettingsOpen] = useState(false);
 
@@ -150,6 +151,7 @@ export default function TaskDetailClient() {
   const watcherIds = watchers.map((w: any) => (typeof w === "string" ? w : w._id));
   const isWatching = !!user && watcherIds.includes(user.id);
   const updates: any[] = isMock ? [] : task.updates ?? [];
+  const resources: any[] = isMock ? [] : task.resources ?? [];
 
   const subtaskList = isMock ? mockSubtasks : (task.subtasks ?? []).map((s: any) => ({
     id: s._id, title: s.title, priority: s.priority, member: toMember(s.member), dueDate: s.dueDate ?? "—",
@@ -253,6 +255,20 @@ export default function TaskDetailClient() {
       setReply("");
     } finally {
       setSubmittingComment(false);
+    }
+  };
+
+  const removeResource = async (resourceId: string) => {
+    if (isMock || !apiConnected) return;
+    if (!canEdit) {
+      alert("This task is locked — unlock it first to make changes.");
+      return;
+    }
+    try {
+      const updated = await api.removeResource(task._id, resourceId);
+      setTask(updated);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Couldn't remove that resource.");
     }
   };
 
@@ -361,13 +377,56 @@ export default function TaskDetailClient() {
           </Field>
 
           <Field label="Resources">
-            <button
-              onClick={() => alert("Attaching documents/links isn't wired up to storage yet — this is a placeholder for that flow.")}
-              className="text-sm flex items-center gap-1.5"
-              style={{ color: "var(--text-muted)" }}
-            >
-              <Paperclip size={14} /> Add document or link…
-            </button>
+            {resources.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-1 w-full">
+                {resources.map((r: any) => (
+                  <span
+                    key={r._id}
+                    className="inline-flex items-center gap-1.5 text-sm pl-2.5 pr-1.5 py-1 rounded-full border"
+                    style={{ borderColor: "var(--border)", color: "var(--text)" }}
+                  >
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
+                      <Paperclip size={12} /> {r.title}
+                    </a>
+                    <button
+                      onClick={() => removeResource(r._id)}
+                      disabled={!canEdit}
+                      className="p-0.5 rounded hover:bg-black/10 disabled:opacity-40"
+                      title="Remove"
+                    >
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="relative">
+              <button
+                onClick={() => setResourceOpen((o) => !o)}
+                disabled={!canEdit}
+                className="text-sm flex items-center gap-1.5 disabled:opacity-50"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <Paperclip size={14} /> Add document or link…
+              </button>
+              <Dropdown open={resourceOpen} onClose={() => setResourceOpen(false)} anchorClassName="left-0 top-full mt-2">
+                <ResourceEditor
+                  onSave={async (title, url) => {
+                    if (isMock || !apiConnected) {
+                      alert(isMock ? "This is demo data — resources can't be saved here." : "Not connected to the server right now.");
+                      return;
+                    }
+                    try {
+                      const updated = await api.addResource(task._id, { title, url });
+                      setTask(updated);
+                      setResourceOpen(false);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Couldn't add that resource.");
+                    }
+                  }}
+                />
+              </Dropdown>
+            </div>
           </Field>
 
           <div className="flex items-center gap-1.5 mt-6 mb-2">
@@ -759,6 +818,49 @@ function DateEditor({ initial, onSave }: { initial?: string; onSave: (v: string)
           Save
         </button>
       </div>
+    </div>
+  );
+}
+
+function ResourceEditor({ onSave }: { onSave: (title: string, url: string) => void }) {
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+
+  const submit = () => {
+    if (!title.trim() || !url.trim()) return;
+    let normalizedUrl = url.trim();
+    if (!/^https?:\/\//i.test(normalizedUrl)) normalizedUrl = `https://${normalizedUrl}`;
+    onSave(title.trim(), normalizedUrl);
+  };
+
+  return (
+    <div className="p-3 w-72">
+      <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-muted)" }}>Title</label>
+      <input
+        autoFocus
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="e.g. Design spec"
+        className="w-full border rounded-lg px-2 py-1.5 text-sm outline-none mb-2"
+        style={{ borderColor: "var(--border)", color: "var(--text)" }}
+      />
+      <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-muted)" }}>Link</label>
+      <input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submit(); } }}
+        placeholder="docs.google.com/… or any URL"
+        className="w-full border rounded-lg px-2 py-1.5 text-sm outline-none"
+        style={{ borderColor: "var(--border)", color: "var(--text)" }}
+      />
+      <button
+        onClick={submit}
+        disabled={!title.trim() || !url.trim()}
+        className="w-full mt-2 rounded-lg text-xs font-medium py-1.5 disabled:opacity-50"
+        style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+      >
+        Add resource
+      </button>
     </div>
   );
 }
