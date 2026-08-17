@@ -292,4 +292,4 @@ Visit your Vercel URL → `/login` → "Continue as Guest" → you should land o
 
 ## Part 2 — Product Understanding
 
-See `docs/Part-2-Product-Understanding.docx` for the AbleSpace Caseload → Take Data workflow writeup, including UX/functionality observations, built from the screenshot provided in the assignment (no live AbleSpace account was available — this is documented explicitly in that file rather than presented as first-hand observation).
+See `docs/Part-2-Product-Understanding.docx` for the AbleSpace Caseload → Take Data workflow writeup, including UX/functionality observations, built from the screenshot provided in the assignment .

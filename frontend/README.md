@@ -54,3 +54,8 @@ src/
 - NestJS API (MongoDB via Mongoose) with modules for Auth (guest + Google OAuth), Tasks, Projects, Members, Comments.
 - Replace `src/lib/mock-data.ts` reads with real API calls.
 - Wire drag-and-drop status updates (`PATCH /tasks/:id`) and priority/date edits to the API.
+
+
+
+
+
