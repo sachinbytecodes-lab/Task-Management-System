@@ -15,10 +15,13 @@ export class AuthController {
   ) {}
 
   private setCookie(res: Response, token: string) {
+    const isProduction = process.env.NODE_ENV === 'production';
+
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      sameSite: isProduction ? 'none' : 'lax',
+      secure: isProduction,
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
