@@ -47,11 +47,11 @@ function groupByStatus(tasks: any[]): Record<string, TaskItem[]> {
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { apiConnected } = useAuth();
+  const { apiConnected, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [usingApi, setUsingApi] = useState(false);
   const [projectName, setProjectName] = useState<string | null>(null);
-  const [data, setData] = useState<Record<string, TaskItem[]>>(mockTasksByStatus);
+  const [data, setData] = useState<Record<string, TaskItem[]>>({ "To Do": [], Doing: [], Completed: [], "On Hold": [] });
   const [view, setView] = useState<ViewType>("list");
   const [menuOpen, setMenuOpen] = useState(false);
   const [fields, setFields] = useState<Record<FieldKey, boolean>>({
@@ -68,6 +68,11 @@ export default function ProjectDetailPage() {
   const [modalStatus, setModalStatus] = useState<Status | null>(null);
 
   useEffect(() => {
+    // Wait for auth to resolve first — see tasks/page.tsx for why: deciding
+    // mock-vs-real before we actually know if the API is reachable is what
+    // caused demo data to flash on screen before real data replaced it.
+    if (authLoading) return;
+
     let cancelled = false;
 
     async function load() {
@@ -93,6 +98,7 @@ export default function ProjectDetailPage() {
         const mock = mockProjects.find((p) => p.id === params.id);
         setProjectName(mock?.name ?? "Project");
         setData(mockTasksByStatus);
+        setUsingApi(false);
         setLoading(false);
       }
     }
@@ -101,7 +107,7 @@ export default function ProjectDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [params.id, apiConnected]);
+  }, [params.id, apiConnected, authLoading]);
 
   const filtered = useMemo(() => {
     const out: Record<string, TaskItem[]> = {};

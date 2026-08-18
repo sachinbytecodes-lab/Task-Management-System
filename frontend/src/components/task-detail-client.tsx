@@ -50,7 +50,7 @@ function formatDate(iso: string) {
 export default function TaskDetailClient() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { apiConnected, user } = useAuth();
+  const { apiConnected, user, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -98,6 +98,12 @@ export default function TaskDetailClient() {
   };
 
   useEffect(() => {
+    // Wait for auth to resolve first — see tasks/page.tsx for the full
+    // explanation. Deciding mock-vs-real before we know if the API is
+    // reachable is what caused the demo task to flash before the real one
+    // loaded a moment later.
+    if (authLoading) return;
+
     let cancelled = false;
 
     async function load() {
@@ -132,7 +138,7 @@ export default function TaskDetailClient() {
     return () => {
       cancelled = true;
     };
-  }, [params.id, apiConnected]);
+  }, [params.id, apiConnected, authLoading]);
 
   const isMock = !task;
   const locked = isMock ? false : !!task.locked;

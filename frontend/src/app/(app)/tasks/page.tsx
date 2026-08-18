@@ -42,8 +42,9 @@ function groupByStatus(tasks: any[]): Record<string, TaskItem[]> {
 const emptyFilters: FilterState = { priority: null, status: null, member: null, label: null, reporter: null, team: null };
 
 export default function TasksPage() {
-  const { apiConnected } = useAuth();
-  const [data, setData] = useState<Record<string, TaskItem[]>>(mockData);
+  const { apiConnected, loading: authLoading } = useAuth();
+  const [data, setData] = useState<Record<string, TaskItem[]>>({ "To Do": [], Doing: [], Completed: [], "On Hold": [] });
+  const [dataLoading, setDataLoading] = useState(true);
   const [usingApi, setUsingApi] = useState(false);
   const [view, setView] = useState<ViewType>("list");
   const [fields, setFields] = useState<Record<FieldKey, boolean>>({
@@ -60,15 +61,31 @@ export default function TasksPage() {
   const [modalStatus, setModalStatus] = useState<Status | null>(null);
 
   useEffect(() => {
-    if (!apiConnected) return;
+    // Wait until we actually know whether the API is reachable before
+    // deciding what to show — deciding early (while auth is still resolving)
+    // is what caused mock demo tasks to flash on screen before real data
+    // replaced them a moment later.
+    if (authLoading) return;
+
+    if (!apiConnected) {
+      setData(mockData);
+      setUsingApi(false);
+      setDataLoading(false);
+      return;
+    }
+
     api
       .getTasks()
       .then((tasks) => {
         setData(groupByStatus(tasks));
         setUsingApi(true);
       })
-      .catch(() => setUsingApi(false));
-  }, [apiConnected]);
+      .catch(() => {
+        setData(mockData);
+        setUsingApi(false);
+      })
+      .finally(() => setDataLoading(false));
+  }, [authLoading, apiConnected]);
 
   const filtered = useMemo(() => {
     const out: Record<string, TaskItem[]> = {};
@@ -162,7 +179,11 @@ export default function TasksPage() {
         onAdd={() => setModalStatus("To Do")}
       />
 
-      {isFiltering && totalVisible === 0 ? (
+      {dataLoading ? (
+        <div className="px-6 py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+          Loading…
+        </div>
+      ) : isFiltering && totalVisible === 0 ? (
         <div className="px-6 py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>
           Match not found.
         </div>

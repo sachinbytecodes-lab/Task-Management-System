@@ -39,8 +39,9 @@ function normalize(p: any): ProjectItem {
 }
 
 export default function ProjectsPage() {
-  const { apiConnected } = useAuth();
-  const [projects, setProjects] = useState<ProjectItem[]>(mockProjects);
+  const { apiConnected, loading: authLoading } = useAuth();
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [usingApi, setUsingApi] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -58,15 +59,30 @@ export default function ProjectsPage() {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!apiConnected) return;
+    // See tasks/page.tsx for why this waits on authLoading first — deciding
+    // mock-vs-real before auth resolves is what caused demo projects to
+    // flash on screen before real ones replaced them.
+    if (authLoading) return;
+
+    if (!apiConnected) {
+      setProjects(mockProjects);
+      setUsingApi(false);
+      setDataLoading(false);
+      return;
+    }
+
     api
       .getProjects()
       .then((data) => {
         setProjects(data.map(normalize));
         setUsingApi(true);
       })
-      .catch(() => setUsingApi(false));
-  }, [apiConnected]);
+      .catch(() => {
+        setProjects(mockProjects);
+        setUsingApi(false);
+      })
+      .finally(() => setDataLoading(false));
+  }, [authLoading, apiConnected]);
 
   const filtered = useMemo(() => {
     return projects
@@ -134,7 +150,11 @@ export default function ProjectsPage() {
       />
 
       <div className="px-6 pb-10">
-        {isFiltering && filtered.length === 0 ? (
+        {dataLoading ? (
+          <div className="py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+            Loading…
+          </div>
+        ) : isFiltering && filtered.length === 0 ? (
           <div className="py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>
             Match not found.
           </div>
