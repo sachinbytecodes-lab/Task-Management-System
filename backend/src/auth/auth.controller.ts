@@ -14,14 +14,24 @@ export class AuthController {
     private readonly config: ConfigService,
   ) {}
 
-  private setCookie(res: Response, token: string) {
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    res.cookie(COOKIE_NAME, token, {
+  private cookieOptions() {
+    const isProd = process.env.NODE_ENV === 'production';
+    return {
       httpOnly: true,
-      sameSite: isProduction ? 'none' : 'lax',
-      secure: isProduction,
+      // Vercel (frontend) and Render (backend) are different domains in
+      // production, which makes every request cross-site. SameSite=Lax is
+      // inconsistently honored cross-site across browsers (notably Safari),
+      // so we use SameSite=None (which requires Secure) in production, and
+      // fall back to Lax locally where frontend/backend share `localhost`.
+      sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
+      secure: isProd,
       path: '/',
+    };
+  }
+
+  private setCookie(res: Response, token: string) {
+    res.cookie(COOKIE_NAME, token, {
+      ...this.cookieOptions(),
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
@@ -59,7 +69,12 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie(COOKIE_NAME);
+    // Must pass the SAME options used in setCookie (minus maxAge/expires) —
+    // Express only recognizes this as "the same cookie" to clear if the
+    // attributes match. This was the actual bug: clearCookie() was being
+    // called with no options at all, so the real session cookie was never
+    // invalidated and stayed valid until it naturally expired 7 days later.
+    res.clearCookie(COOKIE_NAME, this.cookieOptions());
     return { success: true };
   }
 }
